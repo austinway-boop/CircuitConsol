@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Key, Plus, Copy, Check, Eye, EyeOff, Trash2, RefreshCw } from 'lucide-react'
+import { Plus, Copy, Check, Eye, EyeOff, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -20,14 +20,24 @@ interface ApiKey {
   requests: number
 }
 
+const generateRealisticKey = (env: 'production' | 'development') => {
+  const prefix = env === 'production' ? 'sk_live' : 'sk_test'
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let key = ''
+  for (let i = 0; i < 48; i++) {
+    key += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return `${prefix}_${key}`
+}
+
 export default function ApiPage() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([
     {
       id: '1',
       name: 'Production API Key',
-      key: 'sk_live_' + 'x'.repeat(48),
+      key: 'sk_live_' + 'aB3xK9mP2vL8nQ5wR7cF4jH6tY1zD0eG3sA8uB5xK2mV9nL7wP4',
       environment: 'production',
-      createdAt: new Date().toISOString(),
+      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       lastUsed: new Date().toISOString(),
       requests: 12543,
     }
@@ -46,7 +56,7 @@ export default function ApiPage() {
     const newKey = {
       id: Date.now().toString(),
       name: formData.name,
-      key: `sk_${formData.environment === 'production' ? 'live' : 'test'}_${Math.random().toString(36).substring(2)}${Math.random().toString(36).substring(2)}${Math.random().toString(36).substring(2)}`,
+      key: generateRealisticKey(formData.environment),
       environment: formData.environment,
       createdAt: new Date().toISOString(),
       requests: 0,
@@ -83,7 +93,7 @@ export default function ApiPage() {
 
   const maskKey = (key: string) => {
     const parts = key.split('_')
-    return `${parts[0]}_${parts[1]}_${'•'.repeat(16)}`
+    return `${parts[0]}_${parts[1]}_${'•'.repeat(20)}`
   }
 
   return (
@@ -91,7 +101,7 @@ export default function ApiPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold mb-1">API Keys</h1>
-          <p className="text-sm text-muted-foreground">Manage your Circuit API access keys</p>
+          <p className="text-sm text-muted-foreground">Manage your Circuit emotion analysis API keys</p>
         </div>
         <Button onClick={() => setCreateDialogOpen(true)} size="sm">
           <Plus className="h-4 w-4 mr-2" />
@@ -201,7 +211,7 @@ export default function ApiPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create API key</DialogTitle>
-            <DialogDescription>Generate a new API key for your application</DialogDescription>
+            <DialogDescription>Generate a new API key for Circuit emotion analysis</DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-2">
@@ -209,7 +219,7 @@ export default function ApiPage() {
               <Label htmlFor="key-name">Key name</Label>
               <Input
                 id="key-name"
-                placeholder="My Application Key"
+                placeholder="My Application"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
@@ -242,7 +252,7 @@ export default function ApiPage() {
           <DialogHeader>
             <DialogTitle>API key created</DialogTitle>
             <DialogDescription>
-              Make sure to copy your API key now. You will not be able to see it again!
+              Save this key now. You will not be able to see it again.
             </DialogDescription>
           </DialogHeader>
           
@@ -262,7 +272,7 @@ export default function ApiPage() {
                 {copied === 'new' ? (
                   <>
                     <Check className="h-4 w-4 mr-2" />
-                    Copied!
+                    Copied
                   </>
                 ) : (
                   <>
@@ -274,7 +284,7 @@ export default function ApiPage() {
             </div>
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-xs text-yellow-800">
-                ⚠️ This key will only be shown once. Store it securely.
+                Warning: Store this key securely. It will not be shown again.
               </p>
             </div>
             <Button onClick={() => setNewKeyDialogOpen(false)} className="w-full">
@@ -286,4 +296,3 @@ export default function ApiPage() {
     </div>
   )
 }
-
