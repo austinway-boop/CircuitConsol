@@ -13,18 +13,19 @@ export async function POST(request: NextRequest) {
 
     const { orgId, email, role } = await request.json()
 
+    let targetOrgId = orgId
+    
     if (!orgId) {
-      const orgs = getUserOrganizations(user.id)
+      const orgs = await getUserOrganizations(user.id)
       const currentOrg = orgs[0]
 
       if (!currentOrg) {
         return NextResponse.json({ error: 'No organization found' }, { status: 400 })
       }
+      targetOrgId = currentOrg.id
     }
 
-    const targetOrgId = orgId || getUserOrganizations(user.id)[0]?.id
-
-    const membership = getUserOrgMembership(user.id, targetOrgId)
+    const membership = await getUserOrgMembership(user.id, targetOrgId)
     if (!membership || !canManageTeam(membership.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
       expiresAt: expiresAt.toISOString(),
     }
 
-    updateStore(s => ({
+    await updateStore(s => ({
       ...s,
       invites: [...s.invites, invite],
     }))

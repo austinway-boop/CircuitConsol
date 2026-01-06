@@ -6,9 +6,9 @@ import { Activity, Key, Webhook, Users, TrendingUp, Zap } from 'lucide-react'
 
 export default async function OverviewPage() {
   const user = await getCurrentUser()
-  const orgs = getUserOrganizations(user!.id)
+  const orgs = await getUserOrganizations(user!.id)
   const currentOrg = orgs[0]
-  const store = getStore()
+  const store = await getStore()
 
   // Mock data - in a real app, this would be calculated from actual usage
   const stats = {

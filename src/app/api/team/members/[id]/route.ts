@@ -14,7 +14,7 @@ export async function DELETE(
 
     const userId = params.id
 
-    updateStore(s => ({
+    await updateStore(s => ({
       ...s,
       orgMembers: s.orgMembers.filter(m => m.userId !== userId),
     }))

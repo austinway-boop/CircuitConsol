@@ -13,7 +13,7 @@ export async function POST(
     }
 
     const requestId = params.requestId
-    const store = getStore()
+    const store = await getStore()
     
     const joinRequest = (store.joinRequests || []).find(r => r.id === requestId)
     if (!joinRequest) {
@@ -30,7 +30,7 @@ export async function POST(
     }
 
     // Mark request as denied
-    updateStore(s => ({
+    await updateStore(s => ({
       ...s,
       joinRequests: (s.joinRequests || []).map(r =>
         r.id === requestId ? { ...r, status: 'denied' as const } : r

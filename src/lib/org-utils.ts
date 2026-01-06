@@ -2,8 +2,8 @@ import { getStore, updateStore, Organization, OrgMember } from './data-store'
 import { nanoid } from 'nanoid'
 import { slugify } from './utils'
 
-export function getUserOrganizations(userId: string): Organization[] {
-  const store = getStore()
+export async function getUserOrganizations(userId: string): Promise<Organization[]> {
+  const store = await getStore()
   const userOrgIds = store.orgMembers
     .filter(m => m.userId === userId)
     .map(m => m.orgId)
@@ -11,8 +11,8 @@ export function getUserOrganizations(userId: string): Organization[] {
   return store.organizations.filter(o => userOrgIds.includes(o.id))
 }
 
-export function getUserOrgMembership(userId: string, orgId: string): OrgMember | undefined {
-  const store = getStore()
+export async function getUserOrgMembership(userId: string, orgId: string): Promise<OrgMember | undefined> {
+  const store = await getStore()
   return store.orgMembers.find(m => m.userId === userId && m.orgId === orgId)
 }
 
@@ -50,7 +50,7 @@ export async function createOrganization(
     joinedAt: new Date().toISOString(),
   }
 
-  updateStore(s => ({
+  await updateStore(s => ({
     ...s,
     organizations: [...s.organizations, org],
     orgMembers: [...s.orgMembers, membership],

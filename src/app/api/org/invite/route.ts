@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const orgs = getUserOrganizations(user.id)
+    const orgs = await getUserOrganizations(user.id)
     const currentOrg = orgs[0]
 
     if (!currentOrg) {
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       expiresAt: expiresAt.toISOString(),
     }
 
-    updateStore(s => ({
+    await updateStore(s => ({
       ...s,
       invites: [...s.invites, invite],
     }))

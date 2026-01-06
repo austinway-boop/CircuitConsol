@@ -14,7 +14,7 @@ export default async function AppLayout({
     redirect('/sign-in')
   }
 
-  const orgs = getUserOrganizations(user.id)
+  const orgs = await getUserOrganizations(user.id)
   const currentOrg = orgs[0]
 
   return (

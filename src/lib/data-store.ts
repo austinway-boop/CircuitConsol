@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { nanoid } from 'nanoid';
 import bcrypt from 'bcryptjs';
+import { getRedis } from './redis';
 
 export interface User {
   id: string;
@@ -110,10 +111,11 @@ export interface DataStore {
 }
 
 let inMemoryStore: DataStore | null = null;
-let storageMode: 'file' | 'memory' = 'file';
+let storageMode: 'redis' | 'file' | 'memory' = 'redis';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DATA_FILE = path.join(DATA_DIR, 'dev-store.json');
+const REDIS_KEY = 'circuit:store';
 
 function getDefaultStore(): DataStore {
   const defaultPasswordHash = bcrypt.hashSync('password123', 10);
@@ -182,6 +184,25 @@ function getDefaultStore(): DataStore {
   };
 }
 
+async function initRedisStorage(): Promise<DataStore> {
+  try {
+    const redis = getRedis();
+    const data = await redis.get(REDIS_KEY);
+    
+    if (data) {
+      return JSON.parse(data);
+    } else {
+      const defaultData = getDefaultStore();
+      await redis.set(REDIS_KEY, JSON.stringify(defaultData));
+      return defaultData;
+    }
+  } catch (error) {
+    console.warn('Redis storage failed, falling back to file storage:', error);
+    storageMode = 'file';
+    return initFileStorage();
+  }
+}
+
 function initFileStorage(): DataStore {
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -203,6 +224,17 @@ function initFileStorage(): DataStore {
   }
 }
 
+async function saveToRedis(data: DataStore): Promise<void> {
+  try {
+    const redis = getRedis();
+    await redis.set(REDIS_KEY, JSON.stringify(data));
+  } catch (error) {
+    console.warn('Failed to save to Redis, switching to file mode:', error);
+    storageMode = 'file';
+    saveToFile(data);
+  }
+}
+
 function saveToFile(data: DataStore): void {
   if (storageMode === 'file') {
     try {
@@ -219,7 +251,16 @@ function saveToFile(data: DataStore): void {
   }
 }
 
-export function getStore(): DataStore {
+export async function getStore(): Promise<DataStore> {
+  if (storageMode === 'redis') {
+    try {
+      return await initRedisStorage();
+    } catch (error) {
+      console.warn('Redis unavailable, falling back:', error);
+      storageMode = 'file';
+    }
+  }
+
   if (inMemoryStore) {
     return inMemoryStore;
   }
@@ -232,18 +273,26 @@ export function getStore(): DataStore {
   return inMemoryStore;
 }
 
-export function updateStore(updater: (store: DataStore) => DataStore): void {
-  const currentStore = getStore();
+export async function updateStore(updater: (store: DataStore) => DataStore): Promise<void> {
+  const currentStore = await getStore();
   const updatedStore = updater(currentStore);
-  saveToFile(updatedStore);
+  
+  if (storageMode === 'redis') {
+    await saveToRedis(updatedStore);
+  } else {
+    saveToFile(updatedStore);
+  }
 }
 
-export function getStorageMode(): 'file' | 'memory' {
+export function getStorageMode(): 'redis' | 'file' | 'memory' {
   return storageMode;
 }
 
-export function resetStore(): void {
+export async function resetStore(): Promise<void> {
   const defaultData = getDefaultStore();
-  saveToFile(defaultData);
+  if (storageMode === 'redis') {
+    await saveToRedis(defaultData);
+  } else {
+    saveToFile(defaultData);
+  }
 }
-

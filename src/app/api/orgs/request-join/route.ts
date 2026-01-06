@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const store = getStore()
+    const store = await getStore()
     
     // Find organization by name (case-insensitive)
     const org = store.organizations.find(
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       status: 'pending',
     }
 
-    updateStore(s => ({
+    await updateStore(s => ({
       ...s,
       joinRequests: [...(s.joinRequests || []), joinRequest],
     }))

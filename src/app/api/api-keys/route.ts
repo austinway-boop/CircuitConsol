@@ -12,14 +12,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const orgs = getUserOrganizations(user.id)
+    const orgs = await getUserOrganizations(user.id)
     const currentOrg = orgs[0]
 
     if (!currentOrg) {
       return NextResponse.json({ apiKeys: [] })
     }
 
-    const store = getStore()
+    const store = await getStore()
     const orgProjects = store.projects.filter(p => p.orgId === currentOrg.id)
     const projectIds = orgProjects.map(p => p.id)
     const apiKeys = store.apiKeys.filter(k => projectIds.includes(k.projectId))

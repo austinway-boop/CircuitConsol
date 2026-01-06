@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const orgs = getUserOrganizations(user.id)
+    const orgs = await getUserOrganizations(user.id)
     const currentOrg = orgs[0]
 
     if (!currentOrg) {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
     }
 
-    updateStore(s => ({
+    await updateStore(s => ({
       ...s,
       projects: [...s.projects, project],
     }))

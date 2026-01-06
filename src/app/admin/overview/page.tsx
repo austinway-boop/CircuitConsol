@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Users, Building, Key, Activity } from 'lucide-react'
 
 export default async function AdminOverviewPage() {
-  const store = getStore()
+  const store = await getStore()
 
   const stats = {
     totalUsers: store.users.length,

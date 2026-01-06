@@ -11,7 +11,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const store = getStore()
+    const store = await getStore()
     
     // Get user's organization memberships
     const userMemberships = store.orgMembers.filter(m => m.userId === user.id)

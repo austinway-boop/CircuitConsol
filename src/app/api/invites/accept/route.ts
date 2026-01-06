@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Token is required' }, { status: 400 })
     }
 
-    const store = getStore()
+    const store = await getStore()
     const invite = store.invites.find(i => i.token === token && !i.acceptedAt)
 
     if (!invite) {
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       joinedAt: new Date().toISOString(),
     }
 
-    updateStore(s => ({
+    await updateStore(s => ({
       ...s,
       orgMembers: [...s.orgMembers, membership],
       invites: s.invites.map(i =>

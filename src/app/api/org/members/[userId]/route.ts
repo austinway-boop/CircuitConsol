@@ -13,7 +13,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const orgs = getUserOrganizations(user.id)
+    const orgs = await getUserOrganizations(user.id)
     const currentOrg = orgs[0]
 
     if (!currentOrg) {
@@ -21,14 +21,14 @@ export async function DELETE(
     }
 
     // Check if user is a manager
-    const membership = getUserOrgMembership(user.id, currentOrg.id)
+    const membership = await getUserOrgMembership(user.id, currentOrg.id)
     if (!membership || (membership.role !== 'owner' && membership.role !== 'admin')) {
       return NextResponse.json({ error: 'Only managers can remove members' }, { status: 403 })
     }
 
     const userId = params.userId
 
-    updateStore(s => ({
+    await updateStore(s => ({
       ...s,
       orgMembers: s.orgMembers.filter(
         m => !(m.userId === userId && m.orgId === currentOrg.id)

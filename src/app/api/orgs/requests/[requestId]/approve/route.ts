@@ -13,7 +13,7 @@ export async function POST(
     }
 
     const requestId = params.requestId
-    const store = getStore()
+    const store = await getStore()
     
     const joinRequest = (store.joinRequests || []).find(r => r.id === requestId)
     if (!joinRequest) {
@@ -37,7 +37,7 @@ export async function POST(
       joinedAt: new Date().toISOString(),
     }
 
-    updateStore(s => ({
+    await updateStore(s => ({
       ...s,
       orgMembers: [...s.orgMembers, newMember],
       joinRequests: (s.joinRequests || []).map(r =>

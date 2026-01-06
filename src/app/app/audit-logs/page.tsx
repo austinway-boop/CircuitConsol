@@ -8,9 +8,9 @@ import { Badge } from '@/components/ui/badge'
 
 export default async function AuditLogsPage() {
   const user = await getCurrentUser()
-  const orgs = getUserOrganizations(user!.id)
+  const orgs = await getUserOrganizations(user!.id)
   const currentOrg = orgs[0]
-  const store = getStore()
+  const store = await getStore()
 
   const logs = store.auditLogs
     .filter(l => l.orgId === currentOrg?.id)

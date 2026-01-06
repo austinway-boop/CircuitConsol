@@ -14,7 +14,7 @@ export async function DELETE(
 
     const keyId = params.id
 
-    updateStore(s => ({
+    await updateStore(s => ({
       ...s,
       apiKeys: s.apiKeys.filter(k => k.id !== keyId),
     }))

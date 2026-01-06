@@ -16,12 +16,12 @@ export async function GET(
     const orgId = params.orgId
     
     // Check if user can manage team
-    const membership = getUserOrgMembership(user.id, orgId)
+    const membership = await getUserOrgMembership(user.id, orgId)
     if (!membership || !canManageTeam(membership.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const store = getStore()
+    const store = await getStore()
     const requests = (store.joinRequests || []).filter(
       r => r.orgId === orgId && r.status === 'pending'
     )

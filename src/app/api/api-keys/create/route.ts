@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       createdBy: user.id,
     }
 
-    updateStore(s => ({
+    await updateStore(s => ({
       ...s,
       apiKeys: [...s.apiKeys, apiKey],
     }))

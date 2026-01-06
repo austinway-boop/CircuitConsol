@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 
 export default async function AdminCustomersPage() {
-  const store = getStore()
+  const store = await getStore()
 
   return (
     <div className="space-y-6">

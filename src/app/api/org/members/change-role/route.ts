@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const orgs = getUserOrganizations(user.id)
+    const orgs = await getUserOrganizations(user.id)
     const currentOrg = orgs[0]
 
     if (!currentOrg) {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is a manager
-    const membership = getUserOrgMembership(user.id, currentOrg.id)
+    const membership = await getUserOrgMembership(user.id, currentOrg.id)
     if (!membership || (membership.role !== 'owner' && membership.role !== 'admin')) {
       return NextResponse.json({ error: 'Only managers can change roles' }, { status: 403 })
     }
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     // Map new role to old role system
     const oldRole = role === 'manager' ? 'admin' : 'developer'
 
-    updateStore(s => ({
+    await updateStore(s => ({
       ...s,
       orgMembers: s.orgMembers.map(m =>
         m.userId === userId && m.orgId === currentOrg.id

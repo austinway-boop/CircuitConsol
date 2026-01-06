@@ -7,7 +7,7 @@ export default async function HomePage() {
   
   if (user) {
     // Check if user has any organizations
-    const orgs = getUserOrganizations(user.id)
+    const orgs = await getUserOrganizations(user.id)
     
     if (orgs.length === 0) {
       // No organizations - go to onboarding

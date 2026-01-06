@@ -62,13 +62,13 @@ export async function getCurrentUser(): Promise<User | null> {
   const session = verifySession(token);
   if (!session) return null;
 
-  const store = getStore();
+  const store = await getStore();
   const user = store.users.find(u => u.id === session.userId);
   return user || null;
 }
 
 export async function signUp(email: string, password: string, name: string): Promise<{ success: boolean; error?: string; user?: User }> {
-  const store = getStore();
+  const store = await getStore();
 
   // Check if user already exists
   if (store.users.find(u => u.email === email)) {
@@ -86,7 +86,7 @@ export async function signUp(email: string, password: string, name: string): Pro
     createdAt: new Date().toISOString(),
   };
 
-  updateStore(s => ({
+  await updateStore(s => ({
     ...s,
     users: [...s.users, newUser],
   }));
@@ -95,7 +95,7 @@ export async function signUp(email: string, password: string, name: string): Pro
 }
 
 export async function signIn(email: string, password: string): Promise<{ success: boolean; error?: string; user?: User }> {
-  const store = getStore();
+  const store = await getStore();
   const user = store.users.find(u => u.email === email);
 
   if (!user) {
@@ -135,7 +135,7 @@ export async function logAuditEvent(
     timestamp: new Date().toISOString(),
   };
 
-  updateStore(s => ({
+  await updateStore(s => ({
     ...s,
     auditLogs: [...s.auditLogs, auditLog],
   }));

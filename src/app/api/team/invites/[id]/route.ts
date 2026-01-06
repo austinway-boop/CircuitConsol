@@ -14,7 +14,7 @@ export async function DELETE(
 
     const inviteId = params.id
 
-    updateStore(s => ({
+    await updateStore(s => ({
       ...s,
       invites: s.invites.filter(i => i.id !== inviteId),
     }))

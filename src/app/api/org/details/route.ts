@@ -12,14 +12,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const orgs = getUserOrganizations(user.id)
+    const orgs = await getUserOrganizations(user.id)
     const currentOrg = orgs[0]
 
     if (!currentOrg) {
       return NextResponse.json({ org: null, members: [] })
     }
 
-    const store = getStore()
+    const store = await getStore()
     
     // Get user's role
     const membership = store.orgMembers.find(
