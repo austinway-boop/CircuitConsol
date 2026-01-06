@@ -3,10 +3,6 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "regions": ["iad1"],
-  "env": {
-    "AUTH_SECRET": "@auth_secret",
-    "ADMIN_EMAIL_ALLOWLIST": "@admin_email_allowlist"
-  }
+  "regions": ["iad1"]
 }
 
