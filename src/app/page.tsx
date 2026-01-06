@@ -13,8 +13,8 @@ export default async function HomePage() {
       // No organizations - go to onboarding
       redirect('/onboarding')
     } else {
-      // Has organizations - go to organizations page
-      redirect('/app/organizations')
+      // Has organizations - go to organization page
+      redirect('/app/organization')
     }
   } else {
     redirect('/sign-in')

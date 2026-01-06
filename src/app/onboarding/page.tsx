@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,10 +13,7 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   
-  // Create org
   const [orgName, setOrgName] = useState('')
-  
-  // Request to join
   const [requestOrgName, setRequestOrgName] = useState('')
   const [requestMessage, setRequestMessage] = useState('')
 
@@ -35,7 +31,7 @@ export default function OnboardingPage() {
       })
 
       if (res.ok) {
-        router.push('/app/organizations')
+        router.push('/app/organization')
       } else {
         const data = await res.json()
         setError(data.error || 'Failed to create organization')
@@ -64,7 +60,7 @@ export default function OnboardingPage() {
       })
 
       if (res.ok) {
-        router.push('/app/organizations?requested=true')
+        router.push('/app/organization?requested=true')
       } else {
         const data = await res.json()
         setError(data.error || 'Failed to send request')
@@ -77,154 +73,145 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-6">
-      <div className="w-full max-w-xl animate-scale-in">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-lg animate-fade-in">
         {step === 'choice' && (
           <div className="space-y-4">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold mb-2">Welcome to Circuit!</h1>
-              <p className="text-muted-foreground text-lg">
-                Let's set up your workspace
-              </p>
+              <h1 className="text-2xl font-semibold mb-2">Set up your workspace</h1>
+              <p className="text-sm text-muted-foreground">Choose how you'd like to get started</p>
             </div>
 
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow cursor-pointer" onClick={() => setStep('create')}>
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/10 to-orange-500/10 flex items-center justify-center flex-shrink-0">
-                    <Plus className="h-6 w-6 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold mb-1">Create an organization</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Start fresh and invite your team members
-                    </p>
-                  </div>
+            <button
+              onClick={() => setStep('create')}
+              className="w-full p-6 border rounded-xl hover:border-primary/50 hover:bg-accent/50 transition-all text-left"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Plus className="h-5 w-5 text-primary" />
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <h3 className="font-semibold mb-1">Create organization</h3>
+                  <p className="text-sm text-muted-foreground">Start fresh with your own workspace</p>
+                </div>
+              </div>
+            </button>
 
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow cursor-pointer" onClick={() => setStep('request')}>
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/10 to-orange-500/10 flex items-center justify-center flex-shrink-0">
-                    <Building className="h-6 w-6 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold mb-1">Request to join an organization</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Ask an admin for access to an existing organization
-                    </p>
-                  </div>
+            <button
+              onClick={() => setStep('request')}
+              className="w-full p-6 border rounded-xl hover:border-primary/50 hover:bg-accent/50 transition-all text-left"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Building className="h-5 w-5 text-primary" />
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <h3 className="font-semibold mb-1">Request to join</h3>
+                  <p className="text-sm text-muted-foreground">Ask to join an existing organization</p>
+                </div>
+              </div>
+            </button>
           </div>
         )}
 
         {step === 'create' && (
-          <Card className="border-0 shadow-xl animate-fade-in">
-            <CardHeader>
-              <CardTitle className="text-2xl">Create your organization</CardTitle>
-              <CardDescription className="text-base">
-                Choose a name for your organization
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {error && (
-                <div className="p-3 text-sm bg-red-50 border border-red-200 rounded-xl text-red-700 animate-slide-in">
-                  {error}
-                </div>
-              )}
-              
+          <div>
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold mb-2">Create organization</h1>
+              <p className="text-sm text-muted-foreground">Choose a name for your workspace</p>
+            </div>
+
+            {error && (
+              <div className="p-3 text-sm bg-red-50 border border-red-200 rounded-lg text-red-700 mb-4">
+                {error}
+              </div>
+            )}
+            
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="org-name" className="text-sm font-medium">Organization name</Label>
+                <Label htmlFor="org-name">Organization name</Label>
                 <Input
                   id="org-name"
                   placeholder="Acme Corp"
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
-                  className="h-11 text-base"
                   autoFocus
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3">
                 <Button
                   variant="outline"
                   onClick={() => setStep('choice')}
-                  className="flex-1 h-11"
+                  className="flex-1"
                 >
                   Back
                 </Button>
                 <Button
                   onClick={handleCreateOrg}
                   disabled={loading || !orgName.trim()}
-                  className="flex-1 h-11"
+                  className="flex-1"
                 >
-                  {loading ? 'Creating...' : 'Create organization'}
+                  {loading ? 'Creating...' : 'Create'}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {step === 'request' && (
-          <Card className="border-0 shadow-xl animate-fade-in">
-            <CardHeader>
-              <CardTitle className="text-2xl">Request to join</CardTitle>
-              <CardDescription className="text-base">
-                Send a request to an organization admin
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {error && (
-                <div className="p-3 text-sm bg-red-50 border border-red-200 rounded-xl text-red-700 animate-slide-in">
-                  {error}
-                </div>
-              )}
-              
+          <div>
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold mb-2">Request to join</h1>
+              <p className="text-sm text-muted-foreground">Send a request to an organization</p>
+            </div>
+
+            {error && (
+              <div className="p-3 text-sm bg-red-50 border border-red-200 rounded-lg text-red-700 mb-4">
+                {error}
+              </div>
+            )}
+            
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="request-org-name" className="text-sm font-medium">Organization name</Label>
+                <Label htmlFor="request-org-name">Organization name</Label>
                 <Input
                   id="request-org-name"
-                  placeholder="Which organization do you want to join?"
+                  placeholder="Which organization?"
                   value={requestOrgName}
                   onChange={(e) => setRequestOrgName(e.target.value)}
-                  className="h-11 text-base"
                   autoFocus
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="request-message" className="text-sm font-medium">Message (optional)</Label>
+                <Label htmlFor="request-message">Message (optional)</Label>
                 <Input
                   id="request-message"
                   placeholder="Why would you like to join?"
                   value={requestMessage}
                   onChange={(e) => setRequestMessage(e.target.value)}
-                  className="h-11"
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3">
                 <Button
                   variant="outline"
                   onClick={() => setStep('choice')}
-                  className="flex-1 h-11"
+                  className="flex-1"
                 >
                   Back
                 </Button>
                 <Button
                   onClick={handleRequestToJoin}
                   disabled={loading || !requestOrgName.trim()}
-                  className="flex-1 h-11"
+                  className="flex-1"
                 >
                   {loading ? 'Sending...' : 'Send request'}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
     </div>

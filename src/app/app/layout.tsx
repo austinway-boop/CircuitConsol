@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
+import { getUserOrganizations } from '@/lib/org-utils'
 import { SimpleShell } from '@/components/simple-shell'
 
 export default async function AppLayout({
@@ -13,8 +14,11 @@ export default async function AppLayout({
     redirect('/sign-in')
   }
 
+  const orgs = getUserOrganizations(user.id)
+  const currentOrg = orgs[0]
+
   return (
-    <SimpleShell user={user}>
+    <SimpleShell user={user} currentOrg={currentOrg}>
       {children}
     </SimpleShell>
   )

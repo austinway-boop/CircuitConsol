@@ -14,7 +14,7 @@ export default async function AdminLayout({
   }
 
   if (!isAdmin(user.email)) {
-    redirect('/app/overview')
+    redirect('/app/organization')
   }
 
   return (

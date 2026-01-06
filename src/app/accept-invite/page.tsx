@@ -38,7 +38,7 @@ export default function AcceptInvitePage() {
         setStatus('success')
         setMessage('Invitation accepted successfully!')
         setTimeout(() => {
-          router.push('/app/overview')
+          router.push('/app/organization')
         }, 2000)
       } else {
         setStatus('error')
