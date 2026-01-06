@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Claude-inspired light theme with green accents */
+    --background: 0 0% 98%;
+    --foreground: 20 20% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 20% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 20% 15%;
+    /* Claude's warm coral */
+    --primary: 20 90% 60%;
+    --primary-foreground: 0 0% 100%;
+    /* Claude-style green */
+    --secondary: 142 76% 36%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 20 10% 96%;
+    --muted-foreground: 20 10% 50%;
+    --accent: 20 20% 95%;
+    --accent-foreground: 20 20% 15%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 20 15% 92%;
+    --input: 20 15% 92%;
+    --ring: 20 90% 60%;
+    --radius: 1rem;
+  }
+
+  .dark {
+    --background: 0 0% 98%;
+    --foreground: 20 20% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 20% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 20% 15%;
+    --primary: 20 90% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 142 76% 36%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 20 10% 96%;
+    --muted-foreground: 20 10% 50%;
+    --accent: 20 20% 95%;
+    --accent-foreground: 20 20% 15%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 20 15% 92%;
+    --input: 20 15% 92%;
+    --ring: 20 90% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Decorative background shapes */
+.bg-shapes {
+  background-image: 
+    radial-gradient(circle at 20% 50%, rgba(236, 150, 100, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 60% 20%, rgba(251, 146, 60, 0.05) 0%, transparent 40%);
+}
+
+/* Grid background pattern */
+.bg-grid {
+  background-image: linear-gradient(to right, rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Smooth animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.25s ease-out;
+}
+
+/* Floating animation for decorative elements */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Smooth hover effects */
+button:hover:not(:disabled), a:hover {
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled), a:active {
+  transform: translateY(0);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.3);
+}
+
+/* Gradient text */
+.text-gradient-orange {
+  background: linear-gradient(135deg, hsl(20, 90%, 60%) 0%, hsl(30, 95%, 55%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-green {
+  background: linear-gradient(135deg, hsl(142, 76%, 36%) 0%, hsl(160, 84%, 39%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Button enhancements */
+.btn-gradient-orange {
+  background: linear-gradient(135deg, hsl(20, 90%, 60%) 0%, hsl(30, 95%, 55%) 100%);
+  box-shadow: 0 4px 14px 0 rgba(236, 150, 100, 0.35);
+}
+
+.btn-gradient-orange:hover {
+  box-shadow: 0 6px 20px 0 rgba(236, 150, 100, 0.45);
+}
+
+.btn-gradient-green {
+  background: linear-gradient(135deg, hsl(142, 76%, 36%) 0%, hsl(160, 84%, 39%) 100%);
+  box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.35);
+}
+
+.btn-gradient-green:hover {
+  box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.45);
+}
