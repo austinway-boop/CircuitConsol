@@ -8,7 +8,9 @@ import {
   Settings, 
   LogOut,
   Menu,
-  X
+  X,
+  Key,
+  Book
 } from 'lucide-react'
 import { Button } from './ui/button'
 import { cn } from '@/lib/utils'
@@ -27,6 +29,8 @@ interface SimpleShellProps {
 
 const navigation = [
   { name: 'Organization', href: '/app/organization', icon: Building },
+  { name: 'API Keys', href: '/app/api', icon: Key },
+  { name: 'Documentation', href: '/app/docs', icon: Book },
 ]
 
 export function SimpleShell({ children, user, currentOrg }: SimpleShellProps) {
