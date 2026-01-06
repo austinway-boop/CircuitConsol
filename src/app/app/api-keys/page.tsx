@@ -301,9 +301,9 @@ export default function ApiKeysPage() {
                 <CopyButton value={newKey} />
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm text-yellow-600 dark:text-yellow-500">
+              <div className="flex items-center gap-2 text-sm text-yellow-600 dark:text-yellow-500">
               <AlertCircle className="h-4 w-4" />
-              <span>Store this key securely. It won't be shown again.</span>
+              <span>Store this key securely. It will not be shown again.</span>
             </div>
             <div className="flex justify-end">
               <Button onClick={() => setNewKeyDialogOpen(false)}>

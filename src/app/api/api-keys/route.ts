@@ -3,6 +3,8 @@ import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganizations } from '@/lib/org-utils'
 import { getStore } from '@/lib/data-store'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const user = await getCurrentUser()
