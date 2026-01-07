@@ -25,6 +25,7 @@ export async function GET() {
       .map((k: any) => ({
         id: k.id,
         name: k.name,
+        key: k.key,
         keyPrefix: k.key.substring(0, 20),
         environment: k.environment,
         createdAt: k.createdAt,

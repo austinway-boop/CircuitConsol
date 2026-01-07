@@ -1,10 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Play, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 
 const emotionColors: Record<string, string> = {
   joy: 'bg-yellow-50 border-yellow-200 text-yellow-900',
@@ -17,23 +15,43 @@ const emotionColors: Record<string, string> = {
   disgust: 'bg-green-50 border-green-200 text-green-900',
 }
 
-const API_ENDPOINTS = [
-  { label: 'Production (DigitalOcean)', value: 'https://circuit-68ald.ondigitalocean.app' },
-  { label: 'Local Development', value: 'http://localhost:8080' },
-]
-
 export default function PlaygroundPage() {
   const [apiKey, setApiKey] = useState('')
-  const [apiUrl, setApiUrl] = useState(API_ENDPOINTS[0].value)
+  const apiUrl = 'https://circuit-68ald.ondigitalocean.app'
   const [textInput, setTextInput] = useState('I am feeling really excited about this amazing opportunity!')
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState<any>(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+  const [fetchingKey, setFetchingKey] = useState(true)
+
+  useEffect(() => {
+    // Auto-fetch API key
+    const fetchApiKey = async () => {
+      try {
+        const res = await fetch('/api/api-keys/list-circuit')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.keys && data.keys.length > 0) {
+            // Use the first production key, or first key if no production key
+            const prodKey = data.keys.find((k: any) => k.environment === 'production')
+            const keyToUse = prodKey || data.keys[0]
+            setApiKey(keyToUse.key)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch API key:', err)
+      } finally {
+        setFetchingKey(false)
+      }
+    }
+
+    fetchApiKey()
+  }, [])
 
   const handleTest = async () => {
     if (!apiKey.trim()) {
-      setError('Please enter your API key')
+      setError('No API key found. Please create one in the API Keys page.')
       return
     }
 
@@ -89,41 +107,6 @@ export default function PlaygroundPage() {
         {/* Input Section */}
         <div className="space-y-6">
           <div>
-            <h2 className="text-lg font-medium mb-4">Configuration</h2>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="api-endpoint">API Endpoint</Label>
-                <select
-                  id="api-endpoint"
-                  value={apiUrl}
-                  onChange={(e) => setApiUrl(e.target.value)}
-                  className="mt-1 w-full h-9 px-3 py-2 border border-input bg-background rounded text-sm focus:outline-none focus:border-foreground transition-colors"
-                >
-                  {API_ENDPOINTS.map((endpoint) => (
-                    <option key={endpoint.value} value={endpoint.value}>
-                      {endpoint.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <Label htmlFor="api-key">API Key</Label>
-                <Input
-                  id="api-key"
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk_test_... or sk_live_..."
-                  className="mt-1 font-mono text-sm"
-                />
-              </div>
-            </div>
-          </div>
-
-          <hr className="border-border" />
-
-          <div>
             <h2 className="text-lg font-medium mb-4">Text to Analyze</h2>
             <div className="space-y-3">
               <textarea
@@ -135,11 +118,11 @@ export default function PlaygroundPage() {
               
               <Button 
                 onClick={handleTest} 
-                disabled={loading || !textInput.trim() || !apiKey.trim()}
+                disabled={loading || !textInput.trim() || fetchingKey}
                 className="w-full"
                 variant="outline"
               >
-                {loading ? 'Analyzing...' : (
+                {loading ? 'Analyzing...' : fetchingKey ? 'Loading...' : (
                   <>
                     <Play className="h-4 w-4 mr-2" />
                     Analyze Emotions
@@ -186,7 +169,7 @@ export default function PlaygroundPage() {
           {!response && !error && !loading && (
             <div className="border border-dashed border-border rounded p-12 text-center">
               <p className="text-muted-foreground text-sm">
-                Configure your settings and click Analyze to see results
+                Enter text and click Analyze to see results
               </p>
             </div>
           )}
