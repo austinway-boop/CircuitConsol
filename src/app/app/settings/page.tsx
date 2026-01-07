@@ -5,14 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Switch } from '@/components/ui/switch'
-import { Separator } from '@/components/ui/separator'
-import { User, Shield, Bell, Trash2, Save } from 'lucide-react'
+import { useTheme } from '@/components/theme-provider'
+import { Select } from '@/components/ui/select'
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme()
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [message, setMessage] = useState('')
   
   // Profile state
   const [name, setName] = useState('')
@@ -22,15 +21,8 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  
-  // Notification preferences
-  const [emailNotifications, setEmailNotifications] = useState(true)
-  const [apiAlerts, setApiAlerts] = useState(true)
-  const [usageAlerts, setUsageAlerts] = useState(true)
-  const [securityAlerts, setSecurityAlerts] = useState(true)
 
   useEffect(() => {
-    // Fetch current user data
     fetchUserData()
   }, [])
 
@@ -47,9 +39,9 @@ export default function SettingsPage() {
     }
   }
 
-  const showMessage = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text })
-    setTimeout(() => setMessage(null), 5000)
+  const showMessage = (text: string) => {
+    setMessage(text)
+    setTimeout(() => setMessage(''), 3000)
   }
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
@@ -64,13 +56,13 @@ export default function SettingsPage() {
       })
       
       if (res.ok) {
-        showMessage('success', 'Profile updated successfully')
+        showMessage('Profile updated')
       } else {
         const data = await res.json()
-        showMessage('error', data.error || 'Failed to update profile')
+        showMessage(data.error || 'Failed to update')
       }
     } catch (error) {
-      showMessage('error', 'An error occurred')
+      showMessage('An error occurred')
     } finally {
       setLoading(false)
     }
@@ -80,12 +72,12 @@ export default function SettingsPage() {
     e.preventDefault()
     
     if (newPassword !== confirmPassword) {
-      showMessage('error', 'New passwords do not match')
+      showMessage('Passwords do not match')
       return
     }
     
     if (newPassword.length < 8) {
-      showMessage('error', 'Password must be at least 8 characters')
+      showMessage('Password must be at least 8 characters')
       return
     }
     
@@ -99,344 +91,153 @@ export default function SettingsPage() {
       })
       
       if (res.ok) {
-        showMessage('success', 'Password changed successfully')
+        showMessage('Password changed')
         setCurrentPassword('')
         setNewPassword('')
         setConfirmPassword('')
       } else {
         const data = await res.json()
-        showMessage('error', data.error || 'Failed to change password')
+        showMessage(data.error || 'Failed to change password')
       }
     } catch (error) {
-      showMessage('error', 'An error occurred')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleNotificationUpdate = async () => {
-    setLoading(true)
-    
-    try {
-      const res = await fetch('/api/settings/notifications', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          emailNotifications,
-          apiAlerts,
-          usageAlerts,
-          securityAlerts
-        })
-      })
-      
-      if (res.ok) {
-        showMessage('success', 'Notification preferences updated')
-      } else {
-        showMessage('error', 'Failed to update preferences')
-      }
-    } catch (error) {
-      showMessage('error', 'An error occurred')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDeleteAccount = async () => {
-    if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      return
-    }
-    
-    const confirmText = prompt('Type "DELETE" to confirm account deletion:')
-    if (confirmText !== 'DELETE') {
-      showMessage('error', 'Account deletion cancelled')
-      return
-    }
-    
-    setLoading(true)
-    
-    try {
-      const res = await fetch('/api/settings/account', {
-        method: 'DELETE'
-      })
-      
-      if (res.ok) {
-        window.location.href = '/sign-in'
-      } else {
-        const data = await res.json()
-        showMessage('error', data.error || 'Failed to delete account')
-      }
-    } catch (error) {
-      showMessage('error', 'An error occurred')
+      showMessage('An error occurred')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Settings</h1>
-        <p className="text-muted-foreground text-lg">
-          Manage your account settings and preferences
-        </p>
-      </div>
+    <div className="max-w-2xl">
+      <h1 className="text-2xl font-semibold mb-6">Settings</h1>
 
       {message && (
-        <div
-          className={`mb-6 p-4 rounded-lg border-2 ${
-            message.type === 'success'
-              ? 'bg-green-50 border-green-200 text-green-800'
-              : 'bg-red-50 border-red-200 text-red-800'
-          }`}
-        >
-          {message.text}
+        <div className="mb-4 p-3 bg-muted rounded text-sm">
+          {message}
         </div>
       )}
 
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto">
-          <TabsTrigger value="profile" className="gap-2">
-            <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Profile</span>
-          </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2">
-            <Shield className="h-4 w-4" />
-            <span className="hidden sm:inline">Security</span>
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-2">
-            <Bell className="h-4 w-4" />
-            <span className="hidden sm:inline">Notifications</span>
-          </TabsTrigger>
-        </TabsList>
+      <div className="space-y-6">
+        {/* Theme */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Theme</CardTitle>
+            <CardDescription>Choose your preferred theme</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-3">
+              <Button
+                variant={theme === 'light' ? 'default' : 'outline'}
+                onClick={() => setTheme('light')}
+              >
+                Light
+              </Button>
+              <Button
+                variant={theme === 'dark' ? 'default' : 'outline'}
+                onClick={() => setTheme('dark')}
+              >
+                Dark
+              </Button>
+              <Button
+                variant={theme === 'system' ? 'default' : 'outline'}
+                onClick={() => setTheme('system')}
+              >
+                System
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Profile Tab */}
-        <TabsContent value="profile">
-          <Card className="border-2 shadow-xl">
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>
-                Update your personal information and email address
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleProfileUpdate} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="John Doe"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="john@example.com"
-                    required
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    This email will be used for account-related notifications
-                  </p>
-                </div>
-
-                <Separator />
-
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={loading} className="gap-2">
-                    <Save className="h-4 w-4" />
-                    Save Changes
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Security Tab */}
-        <TabsContent value="security">
-          <div className="space-y-6">
-            <Card className="border-2 shadow-xl">
-              <CardHeader>
-                <CardTitle>Change Password</CardTitle>
-                <CardDescription>
-                  Update your password to keep your account secure
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handlePasswordChange} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="current-password">Current Password</Label>
-                    <Input
-                      id="current-password"
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="new-password">New Password</Label>
-                    <Input
-                      id="new-password"
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      required
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Must be at least 8 characters long
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm New Password</Label>
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex justify-end">
-                    <Button type="submit" disabled={loading} className="gap-2">
-                      <Shield className="h-4 w-4" />
-                      Update Password
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 shadow-xl border-destructive">
-              <CardHeader>
-                <CardTitle className="text-destructive">Danger Zone</CardTitle>
-                <CardDescription>
-                  Irreversible and destructive actions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold mb-1">Delete Account</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Permanently delete your account and all associated data
-                    </p>
-                  </div>
-                  <Button
-                    variant="destructive"
-                    onClick={handleDeleteAccount}
-                    disabled={loading}
-                    className="gap-2"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete Account
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Notifications Tab */}
-        <TabsContent value="notifications">
-          <Card className="border-2 shadow-xl">
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-              <CardDescription>
-                Manage how you receive notifications and alerts
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="email-notifications">Email Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive general email notifications
-                  </p>
-                </div>
-                <Switch
-                  id="email-notifications"
-                  checked={emailNotifications}
-                  onCheckedChange={setEmailNotifications}
+        {/* Profile */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile</CardTitle>
+            <CardDescription>Update your profile information</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleProfileUpdate} className="space-y-4">
+              <div>
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  className="mt-1"
+                  required
                 />
               </div>
 
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="api-alerts">API Alerts</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Alerts for API key usage and rate limits
-                  </p>
-                </div>
-                <Switch
-                  id="api-alerts"
-                  checked={apiAlerts}
-                  onCheckedChange={setApiAlerts}
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="mt-1"
+                  required
                 />
               </div>
 
-              <Separator />
+              <Button type="submit" disabled={loading}>
+                Save Changes
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="usage-alerts">Usage Alerts</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Notifications about usage thresholds
-                  </p>
-                </div>
-                <Switch
-                  id="usage-alerts"
-                  checked={usageAlerts}
-                  onCheckedChange={setUsageAlerts}
+        {/* Password */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Password</CardTitle>
+            <CardDescription>Change your password</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              <div>
+                <Label htmlFor="current-password">Current Password</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="mt-1"
+                  required
                 />
               </div>
 
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="security-alerts">Security Alerts</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Important security notifications (recommended)
-                  </p>
-                </div>
-                <Switch
-                  id="security-alerts"
-                  checked={securityAlerts}
-                  onCheckedChange={setSecurityAlerts}
+              <div>
+                <Label htmlFor="new-password">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="mt-1"
+                  required
                 />
               </div>
 
-              <Separator />
-
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleNotificationUpdate}
-                  disabled={loading}
-                  className="gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  Save Preferences
-                </Button>
+              <div>
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="mt-1"
+                  required
+                />
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+
+              <Button type="submit" disabled={loading}>
+                Change Password
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
