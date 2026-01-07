@@ -1,20 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Play, Copy, Check, Plus, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import { Play, Copy, Check, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Select } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useRouter } from 'next/navigation'
-
-interface ApiKey {
-  id: string
-  name: string
-  keyPrefix: string
-  environment: string
-}
 
 const emotionColors: Record<string, string> = {
   joy: 'bg-yellow-100 text-yellow-800 border-yellow-300',
@@ -28,39 +20,17 @@ const emotionColors: Record<string, string> = {
 }
 
 export default function PlaygroundPage() {
-  const router = useRouter()
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
-  const [selectedKeyId, setSelectedKeyId] = useState('')
+  const [apiKey, setApiKey] = useState('')
   const [apiUrl] = useState('https://circuit-68ald.ondigitalocean.app')
   const [textInput, setTextInput] = useState('I am feeling really excited about this amazing opportunity!')
   const [loading, setLoading] = useState(false)
-  const [loadingKeys, setLoadingKeys] = useState(true)
   const [response, setResponse] = useState<any>(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
 
-  useEffect(() => {
-    loadApiKeys()
-  }, [])
-
-  const loadApiKeys = async () => {
-    try {
-      const res = await fetch('/api/api-keys/list-circuit')
-      const data = await res.json()
-      setApiKeys(data.keys || [])
-      if (data.keys && data.keys.length > 0) {
-        setSelectedKeyId(data.keys[0].id)
-      }
-    } catch (error) {
-      console.error('Failed to load API keys:', error)
-    } finally {
-      setLoadingKeys(false)
-    }
-  }
-
   const handleTest = async () => {
-    if (!selectedKeyId) {
-      setError('Please select an API key')
+    if (!apiKey.trim()) {
+      setError('Please enter your API key')
       return
     }
 
@@ -69,18 +39,10 @@ export default function PlaygroundPage() {
     setResponse(null)
 
     try {
-      const fullKey = sessionStorage.getItem(`circuit_key_${selectedKeyId}`)
-      
-      if (!fullKey) {
-        setError('API key not found. Create a new key and try again.')
-        setLoading(false)
-        return
-      }
-
       const res = await fetch(`${apiUrl}/v1/analyze-text`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${fullKey}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ text: textInput })
@@ -108,32 +70,6 @@ export default function PlaygroundPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  if (loadingKeys) {
-    return <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">Loading...</div>
-  }
-
-  if (apiKeys.length === 0) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <Card className="border-0 shadow-sm">
-          <CardContent className="text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Plus className="h-8 w-8 text-primary" />
-            </div>
-            <h3 className="font-semibold mb-2">No API keys</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Create an API key first to test the playground
-            </p>
-            <Button onClick={() => router.push('/app/api')} size="sm">
-              Go to API Keys
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // API returns data directly in result, not result.emotion_analysis
   const emotionData = response?.result
   const topEmotion = emotionData?.overall_emotion
 
@@ -155,19 +91,18 @@ export default function PlaygroundPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="api-key-select" className="text-sm">API Key</Label>
-                <Select
-                  id="api-key-select"
-                  value={selectedKeyId}
-                  onChange={(e) => setSelectedKeyId(e.target.value)}
-                  className="h-10"
-                >
-                  {apiKeys.map((key) => (
-                    <option key={key.id} value={key.id}>
-                      {key.name} - {key.environment}
-                    </option>
-                  ))}
-                </Select>
+                <Label htmlFor="api-key" className="text-sm">Your API Key</Label>
+                <Input
+                  id="api-key"
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="sk_test_... or sk_live_..."
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Paste your API key from the API Keys page
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -186,7 +121,7 @@ export default function PlaygroundPage() {
               
               <Button 
                 onClick={handleTest} 
-                disabled={loading || !textInput.trim() || !selectedKeyId}
+                disabled={loading || !textInput.trim() || !apiKey.trim()}
                 className="w-full"
               >
                 {loading ? 'Analyzing...' : (
@@ -217,7 +152,7 @@ export default function PlaygroundPage() {
                   className="w-full text-left p-3 text-sm border rounded-lg hover:bg-accent transition-colors"
                 >
                   <div className="font-medium mb-1">{example.emotion}</div>
-                  <div className="text-xs text-muted-foreground">{example.text.substring(0, 50)}...</div>
+                  <div className="text-xs text-muted-foreground line-clamp-1">{example.text}</div>
                 </button>
               ))}
             </CardContent>
@@ -237,7 +172,7 @@ export default function PlaygroundPage() {
               <CardContent className="text-center py-16">
                 <Sparkles className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  Enter text and click Analyze to see emotion results
+                  Enter your API key and text, then click Analyze
                 </p>
               </CardContent>
             </Card>
@@ -337,14 +272,14 @@ export default function PlaygroundPage() {
               {emotionData.sentiment && (
                 <Card className="border-0 shadow-sm">
                   <CardHeader>
-                    <CardTitle className="text-sm">Sentiment Analysis</CardTitle>
+                    <CardTitle className="text-sm">Sentiment</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-2">
                       <span className="text-sm">Polarity</span>
                       <Badge className="capitalize">{emotionData.sentiment.polarity}</Badge>
                     </div>
-                    <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center justify-between">
                       <span className="text-sm">Strength</span>
                       <span className="font-mono text-sm">{(emotionData.sentiment.strength * 100).toFixed(0)}%</span>
                     </div>
