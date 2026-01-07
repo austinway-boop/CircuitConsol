@@ -263,6 +263,64 @@ export default function PlaygroundPage() {
                 </div>
               )}
 
+              {/* Debug Log - CRITICAL FOR TESTING */}
+              {emotionData.debug && (
+                <div className="border-2 border-yellow-500 rounded">
+                  <div className="bg-yellow-500 text-black px-4 py-2 font-bold text-sm">
+                    🔧 DEBUG LOG - Where Words Came From
+                  </div>
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-950">
+                    <div className="space-y-2 text-sm mb-4">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Database Connected:</span>
+                        <span className={emotionData.debug.database_connected ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
+                          {emotionData.debug.database_connected ? '✓ YES' : '✗ NO'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">DeepSeek Available:</span>
+                        <span className={emotionData.debug.deepseek_available ? 'text-green-600 font-bold' : 'text-orange-600 font-bold'}>
+                          {emotionData.debug.deepseek_available ? '✓ YES' : '✗ NO'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>From Database:</span>
+                        <span className="font-mono text-green-700">{emotionData.debug.words_from_database}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>From Memory Cache:</span>
+                        <span className="font-mono text-blue-700">{emotionData.debug.words_from_cache}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>From DeepSeek:</span>
+                        <span className="font-mono text-purple-700">{emotionData.debug.words_from_deepseek}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Not Found:</span>
+                        <span className="font-mono text-red-700">{emotionData.debug.words_not_found}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Processing Time:</span>
+                        <span className="font-mono">{emotionData.debug.processing_time_ms}ms</span>
+                      </div>
+                    </div>
+                    {emotionData.debug.database_error && (
+                      <div className="p-2 bg-red-100 text-red-800 rounded text-xs mb-4">
+                        DB Error: {emotionData.debug.database_error}
+                      </div>
+                    )}
+                    <div className="border-t border-yellow-300 pt-3">
+                      <div className="text-xs font-medium mb-2">Full Log:</div>
+                      <div className="bg-black text-green-400 p-3 rounded font-mono text-xs max-h-48 overflow-y-auto">
+                        {emotionData.debug.log?.map((line: string, i: number) => (
+                          <div key={i} className="whitespace-pre-wrap">{line}</div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Stats */}
               <div>
                 <h3 className="text-sm font-medium mb-3">Analysis Statistics</h3>
@@ -277,7 +335,7 @@ export default function PlaygroundPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Processing time</span>
-                    <span className="font-mono">{response.result.processing_time.toFixed(3)}s</span>
+                    <span className="font-mono">{response.result.processing_time?.toFixed(3) || 'N/A'}s</span>
                   </div>
                 </div>
               </div>
