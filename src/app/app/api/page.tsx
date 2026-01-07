@@ -28,6 +28,7 @@ export default function ApiPage() {
   const [newGeneratedKey, setNewGeneratedKey] = useState('')
   const [creating, setCreating] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
+  const [stats, setStats] = useState({ totalRequests: 0, uptime: '0m', uptimePercent: 99.9 })
   const [formData, setFormData] = useState({
     name: '',
     environment: 'development' as 'production' | 'development',
@@ -35,7 +36,24 @@ export default function ApiPage() {
 
   useEffect(() => {
     loadKeys()
+    loadStats()
+    const interval = setInterval(loadStats, 30000) // Update every 30 seconds
+    return () => clearInterval(interval)
   }, [])
+
+  const loadStats = async () => {
+    try {
+      const res = await fetch('/api/circuit-stats')
+      const data = await res.json()
+      setStats({
+        totalRequests: data.totalRequests || 0,
+        uptime: data.uptime || '0m',
+        uptimePercent: data.uptimeSeconds > 0 ? 99.9 : 0
+      })
+    } catch (error) {
+      console.error('Failed to load stats:', error)
+    }
+  }
 
   const loadKeys = async () => {
     try {
@@ -111,14 +129,14 @@ export default function ApiPage() {
         <Card className="border-0 shadow-sm">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold mb-1">
-              {apiKeys.reduce((sum, k) => sum + k.requests, 0).toLocaleString()}
+              {stats.totalRequests.toLocaleString()}
             </div>
             <p className="text-sm text-muted-foreground">Total requests</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold mb-1">99.9%</div>
+            <div className="text-2xl font-bold mb-1">{stats.uptime}</div>
             <p className="text-sm text-muted-foreground">Uptime</p>
           </CardContent>
         </Card>
