@@ -129,15 +129,15 @@ export default function ApiPage() {
         <Card className="border-0 shadow-sm">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold mb-1">
-              {stats.totalRequests.toLocaleString()}
+              {apiKeys.reduce((sum, k) => sum + k.requests, 0).toLocaleString()}
             </div>
-            <p className="text-sm text-muted-foreground">Total requests</p>
+            <p className="text-sm text-muted-foreground">Your requests</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold mb-1">{stats.uptime}</div>
-            <p className="text-sm text-muted-foreground">Uptime</p>
+            <p className="text-sm text-muted-foreground">API uptime</p>
           </CardContent>
         </Card>
       </div>

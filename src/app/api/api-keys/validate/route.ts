@@ -4,9 +4,11 @@ import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
+import { updateStore } from '@/lib/data-store'
+
 export async function POST(request: NextRequest) {
   try {
-    const { apiKey } = await request.json()
+    const { apiKey, incrementUsage } = await request.json()
 
     if (!apiKey) {
       return NextResponse.json(
@@ -24,15 +26,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ valid: false })
     }
 
-    // Update last used timestamp
-    await updateStore(s => ({
-      ...s,
-      circuitApiKeys: (s.circuitApiKeys || []).map((k: any) =>
-        k.keyHash === keyHash
-          ? { ...k, lastUsed: new Date().toISOString(), requests: (k.requests || 0) + 1 }
-          : k
-      ),
-    }))
+    // Update last used timestamp and increment requests if requested
+    if (incrementUsage) {
+      await updateStore(s => ({
+        ...s,
+        circuitApiKeys: (s.circuitApiKeys || []).map((k: any) =>
+          k.keyHash === keyHash
+            ? { 
+                ...k, 
+                lastUsed: new Date().toISOString(), 
+                requests: (k.requests || 0) + 1 
+              }
+            : k
+        ),
+      }))
+    }
 
     return NextResponse.json({
       valid: true,
@@ -47,7 +55,4 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
-// Need to import updateStore
-import { updateStore } from '@/lib/data-store'
 
