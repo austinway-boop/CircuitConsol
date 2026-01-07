@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Copy, Check, Eye, EyeOff, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,70 +13,68 @@ import { Select } from '@/components/ui/select'
 interface ApiKey {
   id: string
   name: string
-  key: string
+  keyPrefix: string
   environment: 'production' | 'development'
   createdAt: string
   lastUsed?: string
   requests: number
 }
 
-const generateRealisticKey = (env: 'production' | 'development') => {
-  const prefix = env === 'production' ? 'sk_live' : 'sk_test'
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  let key = ''
-  for (let i = 0; i < 48; i++) {
-    key += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return `${prefix}_${key}`
-}
-
 export default function ApiPage() {
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([
-    {
-      id: '1',
-      name: 'Production API Key',
-      key: 'sk_live_' + 'aB3xK9mP2vL8nQ5wR7cF4jH6tY1zD0eG3sA8uB5xK2mV9nL7wP4',
-      environment: 'production',
-      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      lastUsed: new Date().toISOString(),
-      requests: 12543,
-    }
-  ])
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
+  const [loading, setLoading] = useState(true)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [newKeyDialogOpen, setNewKeyDialogOpen] = useState(false)
   const [newGeneratedKey, setNewGeneratedKey] = useState('')
-  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set())
+  const [creating, setCreating] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     environment: 'development' as 'production' | 'development',
   })
 
-  const handleCreateKey = () => {
-    const newKey = {
-      id: Date.now().toString(),
-      name: formData.name,
-      key: generateRealisticKey(formData.environment),
-      environment: formData.environment,
-      createdAt: new Date().toISOString(),
-      requests: 0,
-    }
+  useEffect(() => {
+    loadKeys()
+  }, [])
 
-    setApiKeys([...apiKeys, newKey])
-    setNewGeneratedKey(newKey.key)
-    setNewKeyDialogOpen(true)
-    setCreateDialogOpen(false)
-    setFormData({ name: '', environment: 'development' })
+  const loadKeys = async () => {
+    try {
+      const res = await fetch('/api/api-keys/list-circuit')
+      const data = await res.json()
+      setApiKeys(data.keys || [])
+    } catch (error) {
+      console.error('Failed to load API keys:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const toggleKeyVisibility = (id: string) => {
-    const newVisible = new Set(visibleKeys)
-    if (newVisible.has(id)) {
-      newVisible.delete(id)
-    } else {
-      newVisible.add(id)
+  const handleCreateKey = async () => {
+    if (!formData.name.trim()) return
+
+    setCreating(true)
+    try {
+      const res = await fetch('/api/api-keys/create-circuit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setNewGeneratedKey(data.key)
+        // Store key in session for playground use
+        sessionStorage.setItem(`circuit_key_${data.id}`, data.key)
+        setNewKeyDialogOpen(true)
+        await loadKeys()
+        setCreateDialogOpen(false)
+        setFormData({ name: '', environment: 'development' })
+      }
+    } catch (error) {
+      console.error('Failed to create API key:', error)
+    } finally {
+      setCreating(false)
     }
-    setVisibleKeys(newVisible)
   }
 
   const copyKey = (key: string, id: string) => {
@@ -85,15 +83,8 @@ export default function ApiPage() {
     setTimeout(() => setCopied(null), 2000)
   }
 
-  const deleteKey = (id: string) => {
-    if (confirm('Are you sure you want to delete this API key? This action cannot be undone.')) {
-      setApiKeys(apiKeys.filter(k => k.id !== id))
-    }
-  }
-
-  const maskKey = (key: string) => {
-    const parts = key.split('_')
-    return `${parts[0]}_${parts[1]}_${'•'.repeat(20)}`
+  if (loading) {
+    return <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">Loading...</div>
   }
 
   return (
@@ -134,77 +125,58 @@ export default function ApiPage() {
       </div>
 
       {/* API Keys List */}
-      <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">Your API Keys</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {apiKeys.map((apiKey) => (
-              <div key={apiKey.id} className="p-4 border rounded-lg hover:bg-accent/30 transition-colors">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold">{apiKey.name}</h3>
-                      <Badge variant={apiKey.environment === 'production' ? 'default' : 'secondary'} className="text-xs">
-                        {apiKey.environment}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs font-mono">
-                        {visibleKeys.has(apiKey.id) ? apiKey.key : maskKey(apiKey.key)}
+      {apiKeys.length === 0 ? (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="text-center py-12">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Plus className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="font-semibold mb-2">No API keys yet</h3>
+            <p className="text-sm text-muted-foreground mb-4">Create your first API key to start using Circuit</p>
+            <Button onClick={() => setCreateDialogOpen(true)} size="sm">
+              Create API key
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Your API Keys</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {apiKeys.map((apiKey) => (
+                <div key={apiKey.id} className="p-4 border rounded-lg hover:bg-accent/30 transition-colors">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold">{apiKey.name}</h3>
+                        <Badge variant={apiKey.environment === 'production' ? 'default' : 'secondary'} className="text-xs">
+                          {apiKey.environment}
+                        </Badge>
+                      </div>
+                      <code className="text-xs font-mono text-muted-foreground">
+                        {apiKey.keyPrefix}...
                       </code>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => toggleKeyVisibility(apiKey.id)}
-                      >
-                        {visibleKeys.has(apiKey.id) ? (
-                          <EyeOff className="h-3 w-3" />
-                        ) : (
-                          <Eye className="h-3 w-3" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => copyKey(apiKey.key, apiKey.id)}
-                      >
-                        {copied === apiKey.id ? (
-                          <Check className="h-3 w-3 text-green-500" />
-                        ) : (
-                          <Copy className="h-3 w-3" />
-                        )}
-                      </Button>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 hover:text-destructive"
-                    onClick={() => deleteKey(apiKey.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span>Created {new Date(apiKey.createdAt).toLocaleDateString()}</span>
+                    <span>•</span>
+                    <span>{apiKey.requests.toLocaleString()} requests</span>
+                    {apiKey.lastUsed && (
+                      <>
+                        <span>•</span>
+                        <span>Last used {new Date(apiKey.lastUsed).toLocaleDateString()}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span>Created {new Date(apiKey.createdAt).toLocaleDateString()}</span>
-                  <span>•</span>
-                  <span>{apiKey.requests.toLocaleString()} requests</span>
-                  {apiKey.lastUsed && (
-                    <>
-                      <span>•</span>
-                      <span>Last used {new Date(apiKey.lastUsed).toLocaleDateString()}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Create Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -237,10 +209,10 @@ export default function ApiPage() {
             </div>
             <Button 
               onClick={handleCreateKey} 
-              disabled={!formData.name.trim()}
+              disabled={creating || !formData.name.trim()}
               className="w-full"
             >
-              Create API key
+              {creating ? 'Creating...' : 'Create API key'}
             </Button>
           </div>
         </DialogContent>

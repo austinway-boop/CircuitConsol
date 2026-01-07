@@ -98,6 +98,19 @@ export interface JoinRequest {
   status: 'pending' | 'approved' | 'denied';
 }
 
+export interface CircuitApiKey {
+  id: string;
+  name: string;
+  key: string;
+  keyHash: string;
+  orgId: string;
+  environment: 'production' | 'development';
+  createdAt: string;
+  createdBy: string;
+  lastUsed?: string;
+  requests: number;
+}
+
 export interface DataStore {
   users: User[];
   organizations: Organization[];
@@ -108,6 +121,7 @@ export interface DataStore {
   invites: Invite[];
   auditLogs: AuditLog[];
   joinRequests?: JoinRequest[];
+  circuitApiKeys?: CircuitApiKey[];
 }
 
 let inMemoryStore: DataStore | null = null;
@@ -181,6 +195,7 @@ function getDefaultStore(): DataStore {
     invites: [],
     auditLogs: [],
     joinRequests: [],
+    circuitApiKeys: [],
   };
 }
 
