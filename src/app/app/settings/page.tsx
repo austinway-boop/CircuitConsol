@@ -1,12 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useTheme } from '@/components/theme-provider'
-import { Select } from '@/components/ui/select'
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
@@ -56,10 +54,10 @@ export default function SettingsPage() {
       })
       
       if (res.ok) {
-        showMessage('Profile updated')
+        showMessage('Profile updated successfully')
       } else {
         const data = await res.json()
-        showMessage(data.error || 'Failed to update')
+        showMessage(data.error || 'Failed to update profile')
       }
     } catch (error) {
       showMessage('An error occurred')
@@ -91,7 +89,7 @@ export default function SettingsPage() {
       })
       
       if (res.ok) {
-        showMessage('Password changed')
+        showMessage('Password changed successfully')
         setCurrentPassword('')
         setNewPassword('')
         setConfirmPassword('')
@@ -107,136 +105,160 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold mb-6">Settings</h1>
+    <div className="max-w-3xl mx-auto py-8">
+      <div className="mb-12">
+        <h1 className="text-3xl font-normal mb-2">Settings</h1>
+        <p className="text-muted-foreground">
+          Manage your account preferences
+        </p>
+      </div>
 
       {message && (
-        <div className="mb-4 p-3 bg-muted rounded text-sm">
+        <div className="mb-8 p-4 border rounded-md bg-muted/50">
           {message}
         </div>
       )}
 
-      <div className="space-y-6">
-        {/* Theme */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Theme</CardTitle>
-            <CardDescription>Choose your preferred theme</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-3">
-              <Button
-                variant={theme === 'light' ? 'default' : 'outline'}
-                onClick={() => setTheme('light')}
-              >
-                Light
-              </Button>
-              <Button
-                variant={theme === 'dark' ? 'default' : 'outline'}
-                onClick={() => setTheme('dark')}
-              >
-                Dark
-              </Button>
-              <Button
-                variant={theme === 'system' ? 'default' : 'outline'}
-                onClick={() => setTheme('system')}
-              >
-                System
-              </Button>
+      <div className="space-y-12">
+        {/* Appearance */}
+        <section>
+          <h2 className="text-lg font-medium mb-6">Appearance</h2>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm text-muted-foreground font-normal">
+                Theme
+              </Label>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => setTheme('light')}
+                  className={`px-4 py-2 rounded border transition-colors ${
+                    theme === 'light'
+                      ? 'border-foreground bg-foreground text-background'
+                      : 'border-border hover:border-foreground'
+                  }`}
+                >
+                  Light
+                </button>
+                <button
+                  onClick={() => setTheme('dark')}
+                  className={`px-4 py-2 rounded border transition-colors ${
+                    theme === 'dark'
+                      ? 'border-foreground bg-foreground text-background'
+                      : 'border-border hover:border-foreground'
+                  }`}
+                >
+                  Dark
+                </button>
+                <button
+                  onClick={() => setTheme('system')}
+                  className={`px-4 py-2 rounded border transition-colors ${
+                    theme === 'system'
+                      ? 'border-foreground bg-foreground text-background'
+                      : 'border-border hover:border-foreground'
+                  }`}
+                >
+                  System
+                </button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
+
+        <hr className="border-border" />
 
         {/* Profile */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile</CardTitle>
-            <CardDescription>Update your profile information</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleProfileUpdate} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  className="mt-1"
-                  required
-                />
-              </div>
+        <section>
+          <h2 className="text-lg font-medium mb-6">Profile</h2>
+          <form onSubmit={handleProfileUpdate} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm font-normal">
+                Name
+              </Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="max-w-md"
+                required
+              />
+            </div>
 
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  className="mt-1"
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-normal">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="max-w-md"
+                required
+              />
+            </div>
 
-              <Button type="submit" disabled={loading}>
-                Save Changes
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            <Button type="submit" disabled={loading} variant="outline">
+              {loading ? 'Saving...' : 'Save changes'}
+            </Button>
+          </form>
+        </section>
+
+        <hr className="border-border" />
 
         {/* Password */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Password</CardTitle>
-            <CardDescription>Change your password</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePasswordChange} className="space-y-4">
-              <div>
-                <Label htmlFor="current-password">Current Password</Label>
-                <Input
-                  id="current-password"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="mt-1"
-                  required
-                />
-              </div>
+        <section>
+          <h2 className="text-lg font-medium mb-6">Password</h2>
+          <form onSubmit={handlePasswordChange} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="current-password" className="text-sm font-normal">
+                Current password
+              </Label>
+              <Input
+                id="current-password"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="max-w-md"
+                required
+              />
+            </div>
 
-              <div>
-                <Label htmlFor="new-password">New Password</Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="mt-1"
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-password" className="text-sm font-normal">
+                New password
+              </Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="max-w-md"
+                required
+              />
+              <p className="text-sm text-muted-foreground">
+                Must be at least 8 characters
+              </p>
+            </div>
 
-              <div>
-                <Label htmlFor="confirm-password">Confirm Password</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="mt-1"
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password" className="text-sm font-normal">
+                Confirm new password
+              </Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="max-w-md"
+                required
+              />
+            </div>
 
-              <Button type="submit" disabled={loading}>
-                Change Password
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            <Button type="submit" disabled={loading} variant="outline">
+              {loading ? 'Changing...' : 'Change password'}
+            </Button>
+          </form>
+        </section>
       </div>
     </div>
   )
