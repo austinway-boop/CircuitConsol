@@ -1,27 +1,30 @@
 'use client'
 
 import { useState } from 'react'
-import { Play, Copy, Check, Sparkles } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Play, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 const emotionColors: Record<string, string> = {
-  joy: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  trust: 'bg-blue-100 text-blue-800 border-blue-300',
-  anticipation: 'bg-purple-100 text-purple-800 border-purple-300',
-  surprise: 'bg-pink-100 text-pink-800 border-pink-300',
-  anger: 'bg-red-100 text-red-800 border-red-300',
-  fear: 'bg-orange-100 text-orange-800 border-orange-300',
-  sadness: 'bg-gray-100 text-gray-800 border-gray-300',
-  disgust: 'bg-green-100 text-green-800 border-green-300',
+  joy: 'bg-yellow-50 border-yellow-200 text-yellow-900',
+  trust: 'bg-blue-50 border-blue-200 text-blue-900',
+  anticipation: 'bg-purple-50 border-purple-200 text-purple-900',
+  surprise: 'bg-pink-50 border-pink-200 text-pink-900',
+  anger: 'bg-red-50 border-red-200 text-red-900',
+  fear: 'bg-orange-50 border-orange-200 text-orange-900',
+  sadness: 'bg-gray-50 border-gray-200 text-gray-900',
+  disgust: 'bg-green-50 border-green-200 text-green-900',
 }
+
+const API_ENDPOINTS = [
+  { label: 'Production (DigitalOcean)', value: 'https://circuit-68ald.ondigitalocean.app' },
+  { label: 'Local Development', value: 'http://localhost:8080' },
+]
 
 export default function PlaygroundPage() {
   const [apiKey, setApiKey] = useState('')
-  const [apiUrl] = useState('https://circuit-68ald.ondigitalocean.app')
+  const [apiUrl, setApiUrl] = useState(API_ENDPOINTS[0].value)
   const [textInput, setTextInput] = useState('I am feeling really excited about this amazing opportunity!')
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState<any>(null)
@@ -74,48 +77,59 @@ export default function PlaygroundPage() {
   const topEmotion = emotionData?.overall_emotion
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold mb-1">API Playground</h1>
-        <p className="text-sm text-muted-foreground">
-          Test Circuit emotion analysis in real-time
+    <div className="max-w-6xl mx-auto py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-normal mb-2">API Playground</h1>
+        <p className="text-muted-foreground">
+          Test the Circuit emotion analysis API in real-time
         </p>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-8">
         {/* Input Section */}
-        <div className="space-y-4">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">Configuration</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="api-key" className="text-sm">Your API Key</Label>
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-medium mb-4">Configuration</h2>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="api-endpoint">API Endpoint</Label>
+                <select
+                  id="api-endpoint"
+                  value={apiUrl}
+                  onChange={(e) => setApiUrl(e.target.value)}
+                  className="mt-1 w-full h-9 px-3 py-2 border border-input bg-background rounded text-sm focus:outline-none focus:border-foreground transition-colors"
+                >
+                  {API_ENDPOINTS.map((endpoint) => (
+                    <option key={endpoint.value} value={endpoint.value}>
+                      {endpoint.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <Label htmlFor="api-key">API Key</Label>
                 <Input
                   id="api-key"
                   type="password"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder="sk_test_... or sk_live_..."
-                  className="font-mono text-sm"
+                  className="mt-1 font-mono text-sm"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Paste your API key from the API Keys page
-                </p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">Text to Analyze</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <hr className="border-border" />
+
+          <div>
+            <h2 className="text-lg font-medium mb-4">Text to Analyze</h2>
+            <div className="space-y-3">
               <textarea
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
-                className="w-full h-32 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                className="w-full h-32 p-3 border border-input rounded resize-none focus:outline-none focus:border-foreground transition-colors text-sm"
                 placeholder="Enter text to analyze emotions..."
               />
               
@@ -123,6 +137,7 @@ export default function PlaygroundPage() {
                 onClick={handleTest} 
                 disabled={loading || !textInput.trim() || !apiKey.trim()}
                 className="w-full"
+                variant="outline"
               >
                 {loading ? 'Analyzing...' : (
                   <>
@@ -131,15 +146,14 @@ export default function PlaygroundPage() {
                   </>
                 )}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Example Texts */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-sm">Example Texts</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
+          <hr className="border-border" />
+
+          <div>
+            <h2 className="text-sm font-medium mb-3">Example Texts</h2>
+            <div className="space-y-2">
               {[
                 { emotion: 'Joy', text: 'I am absolutely thrilled about this amazing news!' },
                 { emotion: 'Fear', text: 'I am really worried and anxious about what might happen.' },
@@ -149,150 +163,127 @@ export default function PlaygroundPage() {
                 <button
                   key={example.emotion}
                   onClick={() => setTextInput(example.text)}
-                  className="w-full text-left p-3 text-sm border rounded-lg hover:bg-accent transition-colors"
+                  className="w-full text-left p-3 text-sm border border-border rounded hover:border-foreground transition-colors"
                 >
                   <div className="font-medium mb-1">{example.emotion}</div>
                   <div className="text-xs text-muted-foreground line-clamp-1">{example.text}</div>
                 </button>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* Response Section */}
-        <div className="space-y-4">
+        <div className="space-y-6">
+          <h2 className="text-lg font-medium">Results</h2>
+
           {error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            <div className="p-4 border border-red-200 bg-red-50 rounded text-sm text-red-900">
               {error}
             </div>
           )}
 
           {!response && !error && !loading && (
-            <Card className="border-0 shadow-sm">
-              <CardContent className="text-center py-16">
-                <Sparkles className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  Enter your API key and text, then click Analyze
-                </p>
-              </CardContent>
-            </Card>
+            <div className="border border-dashed border-border rounded p-12 text-center">
+              <p className="text-muted-foreground text-sm">
+                Configure your settings and click Analyze to see results
+              </p>
+            </div>
+          )}
+
+          {loading && (
+            <div className="border border-dashed border-border rounded p-12 text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent mb-4"></div>
+              <p className="text-muted-foreground text-sm">
+                Analyzing emotions...
+              </p>
+            </div>
           )}
 
           {emotionData && (
-            <>
+            <div className="space-y-6">
               {/* Main Result */}
-              <Card className={`border-2 shadow-lg ${emotionColors[topEmotion] || 'bg-gray-100'}`}>
-                <CardContent className="pt-6 text-center">
-                  <div className="text-sm font-medium mb-2">Detected Emotion</div>
-                  <div className="text-4xl font-bold capitalize mb-2">{topEmotion}</div>
-                  <div className="text-2xl font-semibold">
-                    {(emotionData.confidence * 100).toFixed(1)}% confidence
-                  </div>
-                </CardContent>
-              </Card>
+              <div className={`border-2 rounded p-6 text-center ${emotionColors[topEmotion] || 'bg-gray-50 border-gray-200'}`}>
+                <div className="text-sm font-medium mb-2">Detected Emotion</div>
+                <div className="text-4xl font-semibold capitalize mb-2">{topEmotion}</div>
+                <div className="text-xl">
+                  {(emotionData.confidence * 100).toFixed(1)}% confidence
+                </div>
+              </div>
 
-              {/* Input Text */}
-              <Card className="border-0 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-sm">Analyzed Text</CardTitle>
-                </CardHeader>
-                <CardContent>
+              {/* Analyzed Text */}
+              <div>
+                <h3 className="text-sm font-medium mb-2">Analyzed Text</h3>
+                <div className="p-4 border rounded bg-muted/30">
                   <p className="text-sm italic">&quot;{textInput}&quot;</p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Emotion Breakdown */}
-              <Card className="border-0 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-sm">All Emotions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Object.entries(emotionData.emotions || {})
-                      .sort(([,a]: any, [,b]: any) => b - a)
-                      .map(([emotion, score]: any) => (
-                        <div key={emotion}>
-                          <div className="flex items-center justify-between text-sm mb-1">
-                            <span className="capitalize font-medium">{emotion}</span>
-                            <span className="font-mono text-xs">
-                              {(score * 100).toFixed(1)}%
-                            </span>
-                          </div>
-                          <div className="w-full h-2 bg-accent rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-primary transition-all"
-                              style={{ width: `${score * 100}%` }}
-                            />
-                          </div>
+              <div>
+                <h3 className="text-sm font-medium mb-3">Emotion Breakdown</h3>
+                <div className="space-y-3">
+                  {Object.entries(emotionData.emotions || {})
+                    .sort(([,a]: any, [,b]: any) => b - a)
+                    .map(([emotion, score]: any) => (
+                      <div key={emotion}>
+                        <div className="flex items-center justify-between text-sm mb-1.5">
+                          <span className="capitalize">{emotion}</span>
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {(score * 100).toFixed(1)}%
+                          </span>
                         </div>
-                      ))}
-                  </div>
-                </CardContent>
-              </Card>
+                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-foreground transition-all"
+                            style={{ width: `${score * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
 
               {/* VAD Scores */}
               {emotionData.vad && (
-                <Card className="border-0 shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-sm">VAD Dimensions</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
+                <div>
+                  <h3 className="text-sm font-medium mb-3">VAD Dimensions</h3>
+                  <div className="space-y-3">
                     <div>
-                      <div className="flex justify-between text-sm mb-1">
+                      <div className="flex justify-between text-sm mb-1.5">
                         <span className="text-muted-foreground">Valence (positivity)</span>
-                        <span className="font-mono font-semibold">{emotionData.vad.valence.toFixed(2)}</span>
+                        <span className="font-mono text-xs">{emotionData.vad.valence.toFixed(2)}</span>
                       </div>
-                      <div className="w-full h-2 bg-accent rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                         <div className="h-full bg-blue-500" style={{ width: `${emotionData.vad.valence * 100}%` }} />
                       </div>
                     </div>
                     <div>
-                      <div className="flex justify-between text-sm mb-1">
+                      <div className="flex justify-between text-sm mb-1.5">
                         <span className="text-muted-foreground">Arousal (intensity)</span>
-                        <span className="font-mono font-semibold">{emotionData.vad.arousal.toFixed(2)}</span>
+                        <span className="font-mono text-xs">{emotionData.vad.arousal.toFixed(2)}</span>
                       </div>
-                      <div className="w-full h-2 bg-accent rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                         <div className="h-full bg-orange-500" style={{ width: `${emotionData.vad.arousal * 100}%` }} />
                       </div>
                     </div>
                     <div>
-                      <div className="flex justify-between text-sm mb-1">
+                      <div className="flex justify-between text-sm mb-1.5">
                         <span className="text-muted-foreground">Dominance (control)</span>
-                        <span className="font-mono font-semibold">{emotionData.vad.dominance.toFixed(2)}</span>
+                        <span className="font-mono text-xs">{emotionData.vad.dominance.toFixed(2)}</span>
                       </div>
-                      <div className="w-full h-2 bg-accent rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                         <div className="h-full bg-green-500" style={{ width: `${emotionData.vad.dominance * 100}%` }} />
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Sentiment */}
-              {emotionData.sentiment && (
-                <Card className="border-0 shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-sm">Sentiment</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm">Polarity</span>
-                      <Badge className="capitalize">{emotionData.sentiment.polarity}</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Strength</span>
-                      <span className="font-mono text-sm">{(emotionData.sentiment.strength * 100).toFixed(0)}%</span>
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               )}
 
               {/* Stats */}
-              <Card className="border-0 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-sm">Analysis Stats</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
+              <div>
+                <h3 className="text-sm font-medium mb-3">Analysis Statistics</h3>
+                <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Words analyzed</span>
                     <span className="font-mono">{emotionData.analyzed_words}/{emotionData.word_count}</span>
@@ -305,38 +296,34 @@ export default function PlaygroundPage() {
                     <span className="text-muted-foreground">Processing time</span>
                     <span className="font-mono">{response.result.processing_time.toFixed(3)}s</span>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Raw JSON */}
-              <Card className="border-0 shadow-sm">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm">Raw JSON</CardTitle>
-                    <Button variant="outline" size="sm" onClick={copyResponse}>
-                      {copied ? (
-                        <>
-                          <Check className="h-3 w-3 mr-1" />
-                          Copied
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copy
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="p-3 bg-slate-900 rounded-lg max-h-64 overflow-y-auto">
-                    <pre className="text-xs text-emerald-400 font-mono">
-                      {JSON.stringify(response, null, 2)}
-                    </pre>
-                  </div>
-                </CardContent>
-              </Card>
-            </>
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium">Raw JSON Response</h3>
+                  <Button variant="ghost" size="sm" onClick={copyResponse}>
+                    {copied ? (
+                      <>
+                        <Check className="h-3 w-3 mr-1.5" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3 mr-1.5" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="p-4 bg-slate-950 rounded max-h-64 overflow-y-auto">
+                  <pre className="text-xs text-emerald-400 font-mono">
+                    {JSON.stringify(response, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
