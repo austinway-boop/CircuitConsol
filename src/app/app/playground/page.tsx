@@ -133,7 +133,8 @@ export default function PlaygroundPage() {
     )
   }
 
-  const emotionData = response?.result?.emotion_analysis
+  // API returns data directly in result, not result.emotion_analysis
+  const emotionData = response?.result
   const topEmotion = emotionData?.overall_emotion
 
   return (
@@ -261,7 +262,7 @@ export default function PlaygroundPage() {
                   <CardTitle className="text-sm">Analyzed Text</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm italic">&quot;{response.result.transcription}&quot;</p>
+                  <p className="text-sm italic">&quot;{textInput}&quot;</p>
                 </CardContent>
               </Card>
 
