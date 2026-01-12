@@ -376,35 +376,76 @@ export default function PlaygroundPage() {
     }
   }
 
+  const [micRequesting, setMicRequesting] = useState(false)
+  
   const startRecording = async () => {
+    console.log('Starting recording...')
+    setError('')
+    setMicRequesting(true)
+    
+    // Check if mediaDevices is available
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setError('Your browser does not support audio recording. Please use Chrome, Firefox, or Safari.')
+      setMicRequesting(false)
+      return
+    }
+    
     try {
+      console.log('Requesting microphone permission...')
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      console.log('Microphone access granted')
       
-      mediaRecorderRef.current = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
-      })
+      // Find supported mime type
+      let mimeType = 'audio/webm'
+      if (!MediaRecorder.isTypeSupported('audio/webm')) {
+        if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4'
+        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+          mimeType = 'audio/ogg'
+        } else {
+          mimeType = '' // Let browser choose
+        }
+      }
+      console.log('Using mime type:', mimeType || 'browser default')
+      
+      const options = mimeType ? { mimeType } : undefined
+      mediaRecorderRef.current = new MediaRecorder(stream, options)
       audioChunksRef.current = []
       
       mediaRecorderRef.current.ondataavailable = (event) => {
+        console.log('Audio data available:', event.data.size, 'bytes')
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data)
         }
       }
       
       mediaRecorderRef.current.onstop = async () => {
+        console.log('Recording stopped, chunks:', audioChunksRef.current.length)
         stream.getTracks().forEach(track => track.stop())
         
         if (audioChunksRef.current.length > 0) {
           const audioBlob = new Blob(audioChunksRef.current, { 
             type: mediaRecorderRef.current?.mimeType || 'audio/webm' 
           })
+          console.log('Audio blob created:', audioBlob.size, 'bytes')
           await sendAudioToAPI(audioBlob)
+        } else {
+          setError('No audio recorded. Please try again.')
         }
       }
       
-      mediaRecorderRef.current.start()
+      mediaRecorderRef.current.onerror = (event: any) => {
+        console.error('MediaRecorder error:', event.error)
+        setError('Recording error: ' + (event.error?.message || 'Unknown error'))
+        setIsRecording(false)
+      }
+      
+      // Request data every second to ensure we capture audio
+      mediaRecorderRef.current.start(1000)
       setIsRecording(true)
+      setMicRequesting(false)
       setRecordingTime(0)
+      console.log('Recording started!')
       
       // Timer to show recording duration
       recordingTimerRef.current = setInterval(() => {
@@ -420,10 +461,15 @@ export default function PlaygroundPage() {
       
     } catch (err: any) {
       console.error('Microphone error:', err)
-      if (err.name === 'NotAllowedError') {
-        setError('Microphone access denied. Please allow microphone access in your browser settings.')
+      setMicRequesting(false)
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setError('Microphone access denied. Please click the lock icon in your browser address bar and allow microphone access.')
+      } else if (err.name === 'NotFoundError') {
+        setError('No microphone found. Please connect a microphone and try again.')
+      } else if (err.name === 'NotReadableError') {
+        setError('Microphone is in use by another application. Please close other apps using the mic.')
       } else {
-        setError('Could not access microphone. Please check your device settings.')
+        setError(`Microphone error: ${err.message || err.name || 'Unknown error'}`)
       }
     }
   }
@@ -1104,13 +1150,19 @@ export default function PlaygroundPage() {
                     />
                     <Button
                       onClick={isRecording ? stopRecording : startRecording}
-                      variant={isRecording ? "destructive" : "outline"}
+                      variant={isRecording ? "destructive" : micRequesting ? "secondary" : "outline"}
                       size="lg"
                       className="px-4"
-                      disabled={audioProcessing || loading}
-                      title={isRecording ? "Stop recording & send" : "Record voice message"}
+                      disabled={audioProcessing || loading || micRequesting}
+                      title={isRecording ? "Stop recording & send" : micRequesting ? "Requesting microphone..." : "Record voice message"}
                     >
-                      {isRecording ? <StopCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                      {micRequesting ? (
+                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : isRecording ? (
+                        <StopCircle className="h-5 w-5" />
+                      ) : (
+                        <Mic className="h-5 w-5" />
+                      )}
                     </Button>
                     <Button
                       onClick={sendSessionMessage}
