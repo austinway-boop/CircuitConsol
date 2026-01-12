@@ -117,8 +117,11 @@ export default function PlaygroundPage() {
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false)
-  const [transcription, setTranscription] = useState('')
-  const recognitionRef = useRef<any>(null)
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [audioProcessing, setAudioProcessing] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -373,118 +376,113 @@ export default function PlaygroundPage() {
     }
   }
 
-  // Check if speech recognition is available
-  const [speechSupported, setSpeechSupported] = useState(false)
-  
-  useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    setSpeechSupported(!!SpeechRecognition)
-  }, [])
-
-  const startRecording = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SpeechRecognition) {
-      setError('Speech recognition not supported. Please type your message instead.')
-      return
-    }
-
+  const startRecording = async () => {
     try {
-      recognitionRef.current = new SpeechRecognition()
-      recognitionRef.current.continuous = true
-      recognitionRef.current.interimResults = true
-      recognitionRef.current.lang = 'en-US'
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       
-      let finalTranscript = ''
+      mediaRecorderRef.current = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+      })
+      audioChunksRef.current = []
       
-      recognitionRef.current.onresult = (event: any) => {
-        let interim = ''
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript + ' '
-          } else {
-            interim += event.results[i][0].transcript
-          }
-        }
-        setTranscription(finalTranscript + interim)
-      }
-      
-      recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error)
-        setIsRecording(false)
-        if (event.error === 'network') {
-          setError('Speech recognition network error. Please type your message instead.')
-        } else if (event.error === 'not-allowed') {
-          setError('Microphone access denied. Please allow microphone access or type your message.')
-        } else {
-          setError(`Speech error: ${event.error}. Please type your message instead.`)
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
         }
       }
       
-      recognitionRef.current.onend = () => {
-        // Auto-restart if still recording
-        if (isRecording && recognitionRef.current) {
-          try {
-            recognitionRef.current.start()
-          } catch (e) {
-            setIsRecording(false)
-          }
+      mediaRecorderRef.current.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop())
+        
+        if (audioChunksRef.current.length > 0) {
+          const audioBlob = new Blob(audioChunksRef.current, { 
+            type: mediaRecorderRef.current?.mimeType || 'audio/webm' 
+          })
+          await sendAudioToAPI(audioBlob)
         }
       }
       
-      recognitionRef.current.start()
+      mediaRecorderRef.current.start()
       setIsRecording(true)
-      setTranscription('')
-    } catch (err) {
-      setError('Failed to start speech recognition. Please type your message instead.')
+      setRecordingTime(0)
+      
+      // Timer to show recording duration
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(t => {
+          // Auto-stop at 30 seconds
+          if (t >= 30) {
+            stopRecording()
+            return t
+          }
+          return t + 1
+        })
+      }, 1000)
+      
+    } catch (err: any) {
+      console.error('Microphone error:', err)
+      if (err.name === 'NotAllowedError') {
+        setError('Microphone access denied. Please allow microphone access in your browser settings.')
+      } else {
+        setError('Could not access microphone. Please check your device settings.')
+      }
     }
   }
 
-  const stopRecording = async () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop()
-      } catch (e) {
-        // Ignore stop errors
-      }
+  const stopRecording = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current)
+      recordingTimerRef.current = null
     }
-    setIsRecording(false)
     
-    // Send the transcription as a message
-    if (transcription.trim() && activeSession && apiKey) {
-      try {
-        setLoading(true)
-        const res = await fetch(`${apiUrl}/v1/sessions/${activeSession.id}/audio`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ transcription: transcription.trim() })
-        })
-        const data = await res.json()
-        if (data.success) {
-          const newMessage: Message = {
-            id: data.message.id,
-            content: transcription.trim(),
-            type: 'audio',
-            emotion: data.analysis.overall_emotion,
-            confidence: data.analysis.confidence,
-            emotions: data.analysis.emotions,
-            vad: data.analysis.vad,
-            timestamp: new Date()
-          }
-          setSessionMessages([...sessionMessages, newMessage])
-          setTranscription('')
-        } else {
-          setError(data.error || 'Failed to send audio')
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+    }
+    
+    setIsRecording(false)
+  }
+
+  const sendAudioToAPI = async (audioBlob: Blob) => {
+    if (!activeSession || !apiKey) return
+    
+    setAudioProcessing(true)
+    setError('')
+    
+    try {
+      const formData = new FormData()
+      formData.append('audio', audioBlob, 'recording.webm')
+      
+      const res = await fetch(`${apiUrl}/v1/sessions/${activeSession.id}/audio`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: formData
+      })
+      
+      const data = await res.json()
+      
+      if (data.success) {
+        const transcription = data.transcription || data.message?.content || '[Audio processed]'
+        const newMessage: Message = {
+          id: data.message.id,
+          content: transcription,
+          type: 'audio',
+          emotion: data.analysis?.overall_emotion || 'neutral',
+          confidence: data.analysis?.confidence || 0,
+          emotions: data.analysis?.emotions || {},
+          vad: data.analysis?.vad || { valence: 0.5, arousal: 0.5, dominance: 0.5 },
+          timestamp: new Date()
         }
-      } catch (err) {
-        setError('Failed to send audio message')
-      } finally {
-        setLoading(false)
+        setSessionMessages(prev => [...prev, newMessage])
+      } else {
+        setError(data.error || 'Failed to process audio')
       }
-    } else if (!transcription.trim() && isRecording) {
-      setError('No speech detected. Please try again or type your message.')
+    } catch (err) {
+      console.error('Audio send error:', err)
+      setError('Failed to send audio. Please try again.')
+    } finally {
+      setAudioProcessing(false)
+      setRecordingTime(0)
     }
   }
 
@@ -1070,14 +1068,27 @@ export default function PlaygroundPage() {
               {/* Input Area */}
               {activeSession && (
                 <div className="border-t p-4">
-                  {/* Transcription preview */}
-                  {isRecording && transcription && (
-                    <div className="mb-3 p-2 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-800">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
-                        Recording...
+                  {/* Recording/Processing status */}
+                  {(isRecording || audioProcessing) && (
+                    <div className={`mb-3 p-3 rounded-lg text-sm ${isRecording ? 'bg-rose-50 border border-rose-200 text-rose-800' : 'bg-blue-50 border border-blue-200 text-blue-800'}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`h-2 w-2 rounded-full ${isRecording ? 'bg-rose-500' : 'bg-blue-500'} animate-pulse`}></span>
+                          {isRecording ? (
+                            <span>Recording... {recordingTime}s (max 30s)</span>
+                          ) : (
+                            <span>Processing audio with Whisper AI...</span>
+                          )}
+                        </div>
+                        {isRecording && (
+                          <div className="w-24 h-1.5 bg-rose-200 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-rose-500 transition-all" 
+                              style={{ width: `${(recordingTime / 30) * 100}%` }}
+                            />
+                          </div>
+                        )}
                       </div>
-                      <p className="italic">{transcription}</p>
                     </div>
                   )}
                   
@@ -1089,28 +1100,30 @@ export default function PlaygroundPage() {
                       onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendSessionMessage()}
                       placeholder="Type a message to analyze..."
                       className="flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-                      disabled={loading || isRecording}
+                      disabled={loading || isRecording || audioProcessing}
                     />
-                    {speechSupported && (
-                      <Button
-                        onClick={isRecording ? stopRecording : startRecording}
-                        variant={isRecording ? "destructive" : "outline"}
-                        size="lg"
-                        className="px-4"
-                        title={isRecording ? "Stop recording" : "Start voice input (optional)"}
-                      >
-                        {isRecording ? <StopCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-                      </Button>
-                    )}
+                    <Button
+                      onClick={isRecording ? stopRecording : startRecording}
+                      variant={isRecording ? "destructive" : "outline"}
+                      size="lg"
+                      className="px-4"
+                      disabled={audioProcessing || loading}
+                      title={isRecording ? "Stop recording & send" : "Record voice message"}
+                    >
+                      {isRecording ? <StopCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                    </Button>
                     <Button
                       onClick={sendSessionMessage}
-                      disabled={loading || !textInput.trim() || isRecording}
+                      disabled={loading || !textInput.trim() || isRecording || audioProcessing}
                       size="lg"
                       className="px-6"
                     >
                       {loading ? '...' : 'Send'}
                     </Button>
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    💡 Click the mic to record voice (transcribed by Whisper AI), or type your message
+                  </p>
                 </div>
               )}
             </div>
