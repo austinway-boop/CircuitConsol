@@ -21,7 +21,9 @@ import {
   ChevronDown,
   Plus,
   Shield,
-  BarChart3
+  BarChart3,
+  Play,
+  MessageSquare
 } from 'lucide-react'
 import { Button } from './ui/button'
 import { useTheme } from './theme-provider'
@@ -49,6 +51,8 @@ interface AppShellProps {
 
 const consoleNavigation = [
   { name: 'Overview', href: '/app/overview', icon: LayoutDashboard },
+  { name: 'Playground', href: '/app/playground', icon: Play },
+  { name: 'Sessions', href: '/app/sessions', icon: MessageSquare },
   { name: 'Projects', href: '/app/projects', icon: FolderKanban },
   { name: 'API Keys', href: '/app/api-keys', icon: Key },
   { name: 'Webhooks', href: '/app/webhooks', icon: Webhook },
