@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Play, Copy, Check, Plus, MessageSquare, User, Building2, X, Clock, TrendingUp, TrendingDown, Minus, Mic, StopCircle, Users, RefreshCw } from 'lucide-react'
+import { Play, Copy, Check, Plus, MessageSquare, User, Building2, X, Clock, TrendingUp, TrendingDown, Minus, Mic, StopCircle, Users, RefreshCw, History, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const emotionColors: Record<string, string> = {
@@ -60,6 +60,28 @@ interface Profile {
   org_id: string
 }
 
+interface ProfileStats {
+  total_sessions: number
+  dominant_emotion: string
+  dominant_emotion_percentage: number
+  emotion_breakdown: Record<string, number>
+  avg_valence: number
+  avg_arousal: number
+  total_messages: number
+}
+
+interface PastSession {
+  id: string
+  status: string
+  started_at: string
+  ended_at?: string
+  overall_mood?: string
+  mood_confidence?: number
+  message_count: number
+  avg_valence?: number
+  duration_seconds?: number
+}
+
 type PlaygroundMode = 'simple' | 'session'
 
 export default function PlaygroundPage() {
@@ -80,10 +102,13 @@ export default function PlaygroundPage() {
   // Session mode state
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null)
+  const [profileStats, setProfileStats] = useState<ProfileStats | null>(null)
+  const [pastSessions, setPastSessions] = useState<PastSession[]>([])
   const [activeSession, setActiveSession] = useState<Session | null>(null)
   const [sessionMessages, setSessionMessages] = useState<Message[]>([])
   const [sessionSummary, setSessionSummary] = useState<any>(null)
   const [loadingProfiles, setLoadingProfiles] = useState(false)
+  const [loadingStats, setLoadingStats] = useState(false)
 
   // Create profile modal
   const [showCreateProfile, setShowCreateProfile] = useState(false)
@@ -92,8 +117,8 @@ export default function PlaygroundPage() {
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
+  const [transcription, setTranscription] = useState('')
+  const recognitionRef = useRef<any>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -137,6 +162,13 @@ export default function PlaygroundPage() {
     }
   }, [mode, apiKey, dashboardOrg])
 
+  // Fetch profile stats when profile is selected
+  useEffect(() => {
+    if (selectedProfile && apiKey) {
+      fetchProfileStats(selectedProfile.id)
+    }
+  }, [selectedProfile, apiKey])
+
   // Scroll to bottom when messages update
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -146,7 +178,6 @@ export default function PlaygroundPage() {
     if (!dashboardOrg || !apiKey) return
 
     try {
-      // Create org in API if it doesn't exist (uses dashboard org ID)
       const res = await fetch(`${apiUrl}/v1/orgs`, {
         method: 'POST',
         headers: {
@@ -154,14 +185,13 @@ export default function PlaygroundPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          id: dashboardOrg.id, // Use the dashboard org ID
+          id: dashboardOrg.id,
           name: dashboardOrg.name,
           slug: dashboardOrg.slug
         })
       })
       
       if (res.ok) {
-        // Now fetch profiles for this org
         fetchProfiles()
       }
     } catch (err) {
@@ -185,6 +215,26 @@ export default function PlaygroundPage() {
       console.error('Failed to fetch profiles:', err)
     } finally {
       setLoadingProfiles(false)
+    }
+  }
+
+  const fetchProfileStats = async (profileId: string) => {
+    if (!apiKey) return
+
+    setLoadingStats(true)
+    try {
+      const res = await fetch(`${apiUrl}/v1/profiles/${profileId}`, {
+        headers: { 'Authorization': `Bearer ${apiKey}` }
+      })
+      const data = await res.json()
+      if (data.success) {
+        setProfileStats(data.emotion_stats)
+        setPastSessions(data.sessions || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch profile stats:', err)
+    } finally {
+      setLoadingStats(false)
     }
   }
 
@@ -271,6 +321,10 @@ export default function PlaygroundPage() {
       if (data.success) {
         setSessionSummary(data.summary)
         setActiveSession(null)
+        // Refresh profile stats
+        if (selectedProfile) {
+          fetchProfileStats(selectedProfile.id)
+        }
       } else {
         setError(data.error || 'Failed to end session')
       }
@@ -319,69 +373,82 @@ export default function PlaygroundPage() {
     }
   }
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      mediaRecorderRef.current = new MediaRecorder(stream)
-      audioChunksRef.current = []
-
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data)
-      }
-
-      mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        await sendAudioMessage(audioBlob)
-        stream.getTracks().forEach(track => track.stop())
-      }
-
-      mediaRecorderRef.current.start()
-      setIsRecording(true)
-    } catch (err) {
-      setError('Failed to access microphone')
+  const startRecording = () => {
+    // Use browser Speech Recognition
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      setError('Speech recognition not supported in this browser. Try Chrome.')
+      return
     }
-  }
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop()
+    recognitionRef.current = new SpeechRecognition()
+    recognitionRef.current.continuous = true
+    recognitionRef.current.interimResults = true
+    
+    let finalTranscript = ''
+    
+    recognitionRef.current.onresult = (event: any) => {
+      let interim = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript + ' '
+        } else {
+          interim += event.results[i][0].transcript
+        }
+      }
+      setTranscription(finalTranscript + interim)
+    }
+    
+    recognitionRef.current.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error)
       setIsRecording(false)
     }
+    
+    recognitionRef.current.start()
+    setIsRecording(true)
+    setTranscription('')
   }
 
-  const sendAudioMessage = async (audioBlob: Blob) => {
-    if (!activeSession || !apiKey) return
-
-    try {
-      setLoading(true)
-      const formData = new FormData()
-      formData.append('audio', audioBlob, 'recording.webm')
-
-      const res = await fetch(`${apiUrl}/v1/sessions/${activeSession.id}/audio`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}` },
-        body: formData
-      })
-      const data = await res.json()
-      if (data.success) {
-        const newMessage: Message = {
-          id: data.message.id,
-          content: data.message.transcription || '[Audio message]',
-          type: 'audio',
-          emotion: data.analysis?.overall_emotion || 'neutral',
-          confidence: data.analysis?.confidence || 0,
-          emotions: data.analysis?.emotions || {},
-          vad: data.analysis?.vad || { valence: 0.5, arousal: 0.5, dominance: 0.5 },
-          timestamp: new Date()
+  const stopRecording = async () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
+    }
+    setIsRecording(false)
+    
+    // Send the transcription as a message
+    if (transcription.trim() && activeSession && apiKey) {
+      try {
+        setLoading(true)
+        const res = await fetch(`${apiUrl}/v1/sessions/${activeSession.id}/audio`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ transcription: transcription.trim() })
+        })
+        const data = await res.json()
+        if (data.success) {
+          const newMessage: Message = {
+            id: data.message.id,
+            content: transcription.trim(),
+            type: 'audio',
+            emotion: data.analysis.overall_emotion,
+            confidence: data.analysis.confidence,
+            emotions: data.analysis.emotions,
+            vad: data.analysis.vad,
+            timestamp: new Date()
+          }
+          setSessionMessages([...sessionMessages, newMessage])
+          setTranscription('')
+        } else {
+          setError(data.error || 'Failed to send audio')
         }
-        setSessionMessages([...sessionMessages, newMessage])
-      } else {
-        setError(data.error || 'Failed to send audio')
+      } catch (err) {
+        setError('Failed to send audio message')
+      } finally {
+        setLoading(false)
       }
-    } catch (err) {
-      setError('Failed to send audio message')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -447,6 +514,12 @@ export default function PlaygroundPage() {
   }
 
   const currentMood = getCurrentSessionMood()
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}m ${secs}s`
+  }
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4">
@@ -529,10 +602,10 @@ export default function PlaygroundPage() {
               <h2 className="text-sm font-medium mb-3 text-muted-foreground">Quick Examples</h2>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { emotion: 'Joy', text: 'I am absolutely thrilled about this amazing news!', color: 'amber' },
-                  { emotion: 'Fear', text: 'I am really worried and anxious about what might happen.', color: 'orange' },
-                  { emotion: 'Anger', text: 'This is incredibly frustrating and makes me so angry.', color: 'rose' },
-                  { emotion: 'Sadness', text: 'I feel so sad and disappointed about this situation.', color: 'slate' }
+                  { emotion: 'Joy', text: 'I am absolutely thrilled about this amazing news!' },
+                  { emotion: 'Fear', text: 'I am really worried and anxious about what might happen.' },
+                  { emotion: 'Anger', text: 'This is incredibly frustrating and makes me so angry.' },
+                  { emotion: 'Sadness', text: 'I feel so sad and disappointed about this situation.' }
                 ].map((example) => (
                   <button
                     key={example.emotion}
@@ -682,7 +755,7 @@ export default function PlaygroundPage() {
               </div>
 
               {/* User List */}
-              <div className="space-y-2 mb-3">
+              <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
                 {profiles.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-2">
                     No users yet. Create one to start a session.
@@ -728,6 +801,98 @@ export default function PlaygroundPage() {
                 Create New User
               </Button>
             </div>
+
+            {/* Profile Stats (shown when user selected) */}
+            {selectedProfile && profileStats && (
+              <div className={`rounded-xl p-4 ${emotionColors[profileStats.dominant_emotion] || 'bg-muted/30'}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <BarChart3 className="h-4 w-4" />
+                  <h3 className="text-sm font-medium">User Profile Stats</h3>
+                </div>
+                
+                {loadingStats ? (
+                  <div className="py-4 text-center">
+                    <RefreshCw className="h-5 w-5 animate-spin mx-auto" />
+                  </div>
+                ) : profileStats.total_sessions === 0 ? (
+                  <p className="text-sm opacity-70">No sessions yet</p>
+                ) : (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span>Dominant Emotion</span>
+                      <span className="font-medium flex items-center gap-1">
+                        {emotionEmojis[profileStats.dominant_emotion]}
+                        <span className="capitalize">{profileStats.dominant_emotion}</span>
+                        <span className="text-xs opacity-70">({profileStats.dominant_emotion_percentage}%)</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Total Sessions</span>
+                      <span className="font-mono">{profileStats.total_sessions}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Total Messages</span>
+                      <span className="font-mono">{profileStats.total_messages}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Avg Valence</span>
+                      <span className="font-mono">{(profileStats.avg_valence * 100).toFixed(0)}%</span>
+                    </div>
+                    
+                    {/* Emotion breakdown */}
+                    {Object.keys(profileStats.emotion_breakdown).length > 0 && (
+                      <div className="pt-2 mt-2 border-t border-current/10">
+                        <div className="text-xs font-medium mb-2 opacity-70">Emotion History</div>
+                        <div className="space-y-1">
+                          {Object.entries(profileStats.emotion_breakdown)
+                            .sort(([,a], [,b]) => b - a)
+                            .slice(0, 4)
+                            .map(([emotion, pct]) => (
+                              <div key={emotion} className="flex items-center gap-2">
+                                <span>{emotionEmojis[emotion]}</span>
+                                <div className="flex-1 h-1.5 bg-current/20 rounded-full overflow-hidden">
+                                  <div className="h-full bg-current/60 rounded-full" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-xs font-mono w-8">{pct}%</span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Past Sessions */}
+            {selectedProfile && pastSessions.length > 0 && (
+              <div className="bg-muted/30 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <History className="h-4 w-4" />
+                  <h3 className="text-sm font-medium">Past Sessions</h3>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {pastSessions.slice(0, 5).map(session => (
+                    <div
+                      key={session.id}
+                      className={`p-2 rounded-lg text-xs ${session.overall_mood ? emotionColors[session.overall_mood] : 'bg-background'}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          {session.overall_mood && emotionEmojis[session.overall_mood]}
+                          <span className="capitalize">{session.overall_mood || 'In progress'}</span>
+                        </span>
+                        <span className="font-mono">{session.message_count} msgs</span>
+                      </div>
+                      <div className="text-[10px] opacity-60 mt-1">
+                        {new Date(session.started_at).toLocaleDateString()}
+                        {session.duration_seconds && ` • ${formatDuration(session.duration_seconds)}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Session Control */}
             <div className="bg-muted/30 rounded-xl p-4">
@@ -809,12 +974,8 @@ export default function PlaygroundPage() {
                     <span>Duration</span>
                     <span className="flex items-center gap-1.5 font-mono">
                       <Clock className="h-3 w-3" />
-                      {Math.floor(sessionSummary.duration_seconds / 60)}m {sessionSummary.duration_seconds % 60}s
+                      {formatDuration(sessionSummary.duration_seconds)}
                     </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Messages</span>
-                    <span className="font-mono">{sessionSummary.message_count}</span>
                   </div>
                 </div>
               </div>
@@ -873,6 +1034,17 @@ export default function PlaygroundPage() {
               {/* Input Area */}
               {activeSession && (
                 <div className="border-t p-4">
+                  {/* Transcription preview */}
+                  {isRecording && transcription && (
+                    <div className="mb-3 p-2 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-800">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
+                        Recording...
+                      </div>
+                      <p className="italic">{transcription}</p>
+                    </div>
+                  )}
+                  
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -881,7 +1053,7 @@ export default function PlaygroundPage() {
                       onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendSessionMessage()}
                       placeholder="Type a message to analyze..."
                       className="flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-                      disabled={loading}
+                      disabled={loading || isRecording}
                     />
                     <Button
                       onClick={isRecording ? stopRecording : startRecording}
@@ -893,7 +1065,7 @@ export default function PlaygroundPage() {
                     </Button>
                     <Button
                       onClick={sendSessionMessage}
-                      disabled={loading || !textInput.trim()}
+                      disabled={loading || !textInput.trim() || isRecording}
                       size="lg"
                       className="px-6"
                     >
