@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Play, Copy, Check, Plus, MessageSquare, User, Building2, X, Clock, TrendingUp, TrendingDown, Minus, Mic, StopCircle } from 'lucide-react'
+import { Play, Copy, Check, Plus, MessageSquare, User, Building2, X, Clock, TrendingUp, TrendingDown, Minus, Mic, StopCircle, Users, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const emotionColors: Record<string, string> = {
@@ -47,7 +47,7 @@ interface Session {
   message_count: number
 }
 
-interface Organization {
+interface DashboardOrg {
   id: string
   name: string
   slug: string
@@ -73,20 +73,20 @@ export default function PlaygroundPage() {
   const [copied, setCopied] = useState(false)
   const [fetchingKey, setFetchingKey] = useState(true)
 
+  // Dashboard org (from your login)
+  const [dashboardOrg, setDashboardOrg] = useState<DashboardOrg | null>(null)
+  const [dashboardUser, setDashboardUser] = useState<{ id: string; name: string; email: string } | null>(null)
+
   // Session mode state
-  const [organizations, setOrganizations] = useState<Organization[]>([])
-  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null)
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null)
   const [activeSession, setActiveSession] = useState<Session | null>(null)
   const [sessionMessages, setSessionMessages] = useState<Message[]>([])
   const [sessionSummary, setSessionSummary] = useState<any>(null)
+  const [loadingProfiles, setLoadingProfiles] = useState(false)
 
-  // New org/profile creation
-  const [showCreateOrg, setShowCreateOrg] = useState(false)
+  // Create profile modal
   const [showCreateProfile, setShowCreateProfile] = useState(false)
-  const [newOrgName, setNewOrgName] = useState('')
-  const [newOrgSlug, setNewOrgSlug] = useState('')
   const [newUsername, setNewUsername] = useState('')
   const [newDisplayName, setNewDisplayName] = useState('')
 
@@ -97,64 +97,84 @@ export default function PlaygroundPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Fetch API key and dashboard org on mount
   useEffect(() => {
-    const fetchApiKey = async () => {
+    const init = async () => {
       try {
-        const res = await fetch('/api/api-keys/list-circuit')
-        if (res.ok) {
-          const data = await res.json()
-          if (data.keys && data.keys.length > 0) {
-            const prodKey = data.keys.find((k: any) => k.environment === 'production')
-            const keyToUse = prodKey || data.keys[0]
-            setApiKey(keyToUse.key)
+        // Get API key
+        const keyRes = await fetch('/api/api-keys/list-circuit')
+        if (keyRes.ok) {
+          const keyData = await keyRes.json()
+          if (keyData.keys && keyData.keys.length > 0) {
+            const prodKey = keyData.keys.find((k: any) => k.environment === 'production')
+            setApiKey((prodKey || keyData.keys[0]).key)
+          }
+        }
+
+        // Get current dashboard org
+        const orgRes = await fetch('/api/org/current')
+        if (orgRes.ok) {
+          const orgData = await orgRes.json()
+          if (orgData.success) {
+            setDashboardOrg(orgData.organization)
+            setDashboardUser(orgData.user)
           }
         }
       } catch (err) {
-        console.error('Failed to fetch API key:', err)
+        console.error('Init error:', err)
       } finally {
         setFetchingKey(false)
       }
     }
 
-    fetchApiKey()
+    init()
   }, [])
 
-  // Fetch organizations when switching to session mode
+  // Ensure org exists in API when switching to session mode
   useEffect(() => {
-    if (mode === 'session' && apiKey) {
-      fetchOrganizations()
+    if (mode === 'session' && apiKey && dashboardOrg) {
+      ensureOrgInAPI()
     }
-  }, [mode, apiKey])
-
-  // Fetch profiles when org is selected
-  useEffect(() => {
-    if (selectedOrg && apiKey) {
-      fetchProfiles(selectedOrg.id)
-    }
-  }, [selectedOrg, apiKey])
+  }, [mode, apiKey, dashboardOrg])
 
   // Scroll to bottom when messages update
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [sessionMessages])
 
-  const fetchOrganizations = async () => {
+  const ensureOrgInAPI = async () => {
+    if (!dashboardOrg || !apiKey) return
+
     try {
+      // Create org in API if it doesn't exist (uses dashboard org ID)
       const res = await fetch(`${apiUrl}/v1/orgs`, {
-        headers: { 'Authorization': `Bearer ${apiKey}` }
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: dashboardOrg.id, // Use the dashboard org ID
+          name: dashboardOrg.name,
+          slug: dashboardOrg.slug
+        })
       })
-      const data = await res.json()
-      if (data.success) {
-        setOrganizations(data.organizations || [])
+      
+      if (res.ok) {
+        // Now fetch profiles for this org
+        fetchProfiles()
       }
     } catch (err) {
-      console.error('Failed to fetch organizations:', err)
+      console.error('Failed to ensure org in API:', err)
     }
   }
 
-  const fetchProfiles = async (orgId: string) => {
+  const fetchProfiles = async () => {
+    if (!dashboardOrg || !apiKey) return
+
+    setLoadingProfiles(true)
     try {
-      const res = await fetch(`${apiUrl}/v1/orgs/${orgId}/profiles`, {
+      const res = await fetch(`${apiUrl}/v1/orgs/${dashboardOrg.id}/profiles`, {
         headers: { 'Authorization': `Bearer ${apiKey}` }
       })
       const data = await res.json()
@@ -163,44 +183,17 @@ export default function PlaygroundPage() {
       }
     } catch (err) {
       console.error('Failed to fetch profiles:', err)
-    }
-  }
-
-  const createOrganization = async () => {
-    if (!newOrgName || !newOrgSlug) return
-
-    try {
-      setLoading(true)
-      const res = await fetch(`${apiUrl}/v1/orgs`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name: newOrgName, slug: newOrgSlug })
-      })
-      const data = await res.json()
-      if (data.success) {
-        setOrganizations([...organizations, data.organization])
-        setSelectedOrg(data.organization)
-        setShowCreateOrg(false)
-        setNewOrgName('')
-        setNewOrgSlug('')
-      } else {
-        setError(data.error || 'Failed to create organization')
-      }
-    } catch (err) {
-      setError('Failed to create organization')
     } finally {
-      setLoading(false)
+      setLoadingProfiles(false)
     }
   }
 
   const createProfile = async () => {
-    if (!selectedOrg || !newUsername) return
+    if (!dashboardOrg || !newUsername || !apiKey) return
 
     try {
       setLoading(true)
+      setError('')
       const res = await fetch(`${apiUrl}/v1/profiles`, {
         method: 'POST',
         headers: {
@@ -208,7 +201,7 @@ export default function PlaygroundPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          org_id: selectedOrg.id,
+          org_id: dashboardOrg.id,
           username: newUsername,
           display_name: newDisplayName || newUsername
         })
@@ -231,8 +224,8 @@ export default function PlaygroundPage() {
   }
 
   const startSession = async () => {
-    if (!selectedOrg || !selectedProfile) {
-      setError('Please select an organization and profile first')
+    if (!dashboardOrg || !selectedProfile || !apiKey) {
+      setError('Please select a user first')
       return
     }
 
@@ -246,7 +239,7 @@ export default function PlaygroundPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          org_id: selectedOrg.id,
+          org_id: dashboardOrg.id,
           profile_id: selectedProfile.id
         })
       })
@@ -266,7 +259,7 @@ export default function PlaygroundPage() {
   }
 
   const endSession = async () => {
-    if (!activeSession) return
+    if (!activeSession || !apiKey) return
 
     try {
       setLoading(true)
@@ -289,7 +282,7 @@ export default function PlaygroundPage() {
   }
 
   const sendSessionMessage = async () => {
-    if (!activeSession || !textInput.trim()) return
+    if (!activeSession || !textInput.trim() || !apiKey) return
 
     try {
       setLoading(true)
@@ -357,7 +350,7 @@ export default function PlaygroundPage() {
   }
 
   const sendAudioMessage = async (audioBlob: Blob) => {
-    if (!activeSession) return
+    if (!activeSession || !apiKey) return
 
     try {
       setLoading(true)
@@ -501,38 +494,38 @@ export default function PlaygroundPage() {
 
       {/* Simple Mode */}
       {mode === 'simple' && (
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* Input Section */}
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-lg font-medium mb-4">Text to Analyze</h2>
-            <div className="space-y-3">
-              <textarea
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Input Section */}
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-medium mb-4">Text to Analyze</h2>
+              <div className="space-y-3">
+                <textarea
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
                   className="w-full h-32 p-4 border border-input rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all text-sm font-mono"
-                placeholder="Enter text to analyze emotions..."
-              />
-              
-              <Button 
+                  placeholder="Enter text to analyze emotions..."
+                />
+                
+                <Button 
                   onClick={handleSimpleTest} 
-                disabled={loading || !textInput.trim() || fetchingKey}
-                className="w-full"
+                  disabled={loading || !textInput.trim() || fetchingKey}
+                  className="w-full"
                   size="lg"
-              >
-                {loading ? 'Analyzing...' : fetchingKey ? 'Loading...' : (
-                  <>
-                    <Play className="h-4 w-4 mr-2" />
-                    Analyze Emotions
-                  </>
-                )}
-              </Button>
+                >
+                  {loading ? 'Analyzing...' : fetchingKey ? 'Loading...' : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" />
+                      Analyze Emotions
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
 
-          <hr className="border-border" />
+            <hr className="border-border" />
 
-          <div>
+            <div>
               <h2 className="text-sm font-medium mb-3 text-muted-foreground">Quick Examples</h2>
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -540,10 +533,10 @@ export default function PlaygroundPage() {
                   { emotion: 'Fear', text: 'I am really worried and anxious about what might happen.', color: 'orange' },
                   { emotion: 'Anger', text: 'This is incredibly frustrating and makes me so angry.', color: 'rose' },
                   { emotion: 'Sadness', text: 'I feel so sad and disappointed about this situation.', color: 'slate' }
-              ].map((example) => (
-                <button
-                  key={example.emotion}
-                  onClick={() => setTextInput(example.text)}
+                ].map((example) => (
+                  <button
+                    key={example.emotion}
+                    onClick={() => setTextInput(example.text)}
                     className="text-left p-3 text-sm border border-border rounded-lg hover:border-foreground/30 hover:bg-muted/30 transition-all"
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -551,53 +544,53 @@ export default function PlaygroundPage() {
                       <span className="font-medium">{example.emotion}</span>
                     </div>
                     <div className="text-xs text-muted-foreground line-clamp-2">{example.text}</div>
-                </button>
-              ))}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Response Section */}
-        <div className="space-y-6">
-          <h2 className="text-lg font-medium">Results</h2>
+          {/* Response Section */}
+          <div className="space-y-6">
+            <h2 className="text-lg font-medium">Results</h2>
 
-          {!response && !error && !loading && (
+            {!response && !error && !loading && (
               <div className="border-2 border-dashed border-border rounded-xl p-16 text-center">
                 <div className="text-4xl mb-4">🎭</div>
-              <p className="text-muted-foreground text-sm">
-                Enter text and click Analyze to see results
-              </p>
-            </div>
-          )}
+                <p className="text-muted-foreground text-sm">
+                  Enter text and click Analyze to see results
+                </p>
+              </div>
+            )}
 
-          {loading && (
+            {loading && (
               <div className="border-2 border-dashed border-border rounded-xl p-16 text-center">
                 <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-current border-r-transparent mb-4"></div>
-              <p className="text-muted-foreground text-sm">
-                Analyzing emotions...
-              </p>
-            </div>
-          )}
+                <p className="text-muted-foreground text-sm">
+                  Analyzing emotions...
+                </p>
+              </div>
+            )}
 
-          {emotionData && (
-            <div className="space-y-6">
-              {/* Main Result */}
+            {emotionData && (
+              <div className="space-y-6">
+                {/* Main Result */}
                 <div className={`border-2 rounded-xl p-8 text-center ${emotionColors[topEmotion] || 'bg-gray-50 border-gray-200'}`}>
                   <div className="text-6xl mb-3">{emotionEmojis[topEmotion] || '😐'}</div>
                   <div className="text-sm font-medium mb-1 opacity-70">Detected Emotion</div>
                   <div className="text-3xl font-bold capitalize mb-2">{topEmotion}</div>
                   <div className="text-lg font-medium opacity-80">
-                  {(emotionData.confidence * 100).toFixed(1)}% confidence
+                    {(emotionData.confidence * 100).toFixed(1)}% confidence
+                  </div>
                 </div>
-              </div>
 
-              {/* Emotion Breakdown */}
+                {/* Emotion Breakdown */}
                 <div className="bg-muted/30 rounded-xl p-6">
                   <h3 className="text-sm font-medium mb-4">Emotion Breakdown</h3>
-                <div className="space-y-3">
-                  {Object.entries(emotionData.emotions || {})
-                    .sort(([,a]: any, [,b]: any) => b - a)
-                    .map(([emotion, score]: any) => (
+                  <div className="space-y-3">
+                    {Object.entries(emotionData.emotions || {})
+                      .sort(([,a]: any, [,b]: any) => b - a)
+                      .map(([emotion, score]: any) => (
                         <div key={emotion} className="flex items-center gap-3">
                           <span className="text-lg">{emotionEmojis[emotion]}</span>
                           <span className="capitalize text-sm w-24">{emotion}</span>
@@ -610,13 +603,13 @@ export default function PlaygroundPage() {
                           <span className="font-mono text-xs text-muted-foreground w-12 text-right">
                             {(score * 100).toFixed(1)}%
                           </span>
-                      </div>
-                    ))}
+                        </div>
+                      ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* VAD Scores */}
-              {emotionData.vad && (
+                {/* VAD Scores */}
+                {emotionData.vad && (
                   <div className="grid grid-cols-3 gap-3">
                     <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 text-center">
                       <div className="text-2xl font-bold text-sky-600">{emotionData.vad.valence.toFixed(2)}</div>
@@ -629,32 +622,32 @@ export default function PlaygroundPage() {
                     <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
                       <div className="text-2xl font-bold text-emerald-600">{emotionData.vad.dominance.toFixed(2)}</div>
                       <div className="text-xs text-emerald-700">Dominance</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Raw JSON */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium">Raw Response</h3>
+                    <Button variant="ghost" size="sm" onClick={copyResponse}>
+                      {copied ? (
+                        <><Check className="h-3 w-3 mr-1.5" />Copied</>
+                      ) : (
+                        <><Copy className="h-3 w-3 mr-1.5" />Copy</>
+                      )}
+                    </Button>
+                  </div>
+                  <div className="p-4 bg-slate-950 rounded-lg max-h-48 overflow-y-auto">
+                    <pre className="text-xs text-emerald-400 font-mono">
+                      {JSON.stringify(response, null, 2)}
+                    </pre>
                   </div>
                 </div>
-              )}
-
-              {/* Raw JSON */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-medium">Raw Response</h3>
-                  <Button variant="ghost" size="sm" onClick={copyResponse}>
-                    {copied ? (
-                        <><Check className="h-3 w-3 mr-1.5" />Copied</>
-                    ) : (
-                        <><Copy className="h-3 w-3 mr-1.5" />Copy</>
-                    )}
-                  </Button>
-                </div>
-                  <div className="p-4 bg-slate-950 rounded-lg max-h-48 overflow-y-auto">
-                  <pre className="text-xs text-emerald-400 font-mono">
-                    {JSON.stringify(response, null, 2)}
-                  </pre>
-                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
       )}
 
       {/* Session Mode */}
@@ -662,161 +655,78 @@ export default function PlaygroundPage() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Left Panel: Setup */}
           <div className="space-y-4">
-            {/* Organization Selection */}
-            <div className="bg-muted/30 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-medium flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  Organization
-                </h3>
-                {organizations.length > 0 && !showCreateOrg && (
-                  <button
-                    onClick={() => setShowCreateOrg(true)}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                  >
-                    <Plus className="h-3 w-3" />
-                    New
-                  </button>
-                )}
+            {/* Current Organization (from dashboard login) */}
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Building2 className="h-4 w-4 opacity-70" />
+                <span className="text-xs text-slate-400 uppercase tracking-wide">Your Organization</span>
               </div>
-              
-              {showCreateOrg || organizations.length === 0 ? (
-                <div className="space-y-2">
-                  {organizations.length === 0 && !showCreateOrg && (
-                    <p className="text-xs text-muted-foreground mb-2">
-                      No organizations yet. Create one to get started:
-                    </p>
-                  )}
-                  <input
-                    type="text"
-                    value={newOrgName}
-                    onChange={(e) => {
-                      setNewOrgName(e.target.value)
-                      setNewOrgSlug(e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''))
-                    }}
-                    placeholder="Organization name"
-                    className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                  <input
-                    type="text"
-                    value={newOrgSlug}
-                    onChange={(e) => setNewOrgSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                    placeholder="org-slug"
-                    className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring font-mono"
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={createOrganization} disabled={loading || !newOrgName || !newOrgSlug}>
-                      {loading ? 'Creating...' : 'Create Organization'}
-                    </Button>
-                    {organizations.length > 0 && (
-                      <Button size="sm" variant="ghost" onClick={() => setShowCreateOrg(false)}>
-                        Cancel
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <select
-                    value={selectedOrg?.id || ''}
-                    onChange={(e) => {
-                      const org = organizations.find(o => o.id === e.target.value)
-                      setSelectedOrg(org || null)
-                      setSelectedProfile(null)
-                      setActiveSession(null)
-                    }}
-                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="">Select organization...</option>
-                    {organizations.map(org => (
-                      <option key={org.id} value={org.id}>{org.name}</option>
-                    ))}
-                  </select>
-                  {selectedOrg && (
-                    <p className="text-xs text-muted-foreground">
-                      ID: <code className="bg-muted px-1 rounded">{selectedOrg.id}</code>
-                    </p>
-                  )}
-                </div>
-              )}
+              <div className="text-xl font-semibold">{dashboardOrg?.name || 'Loading...'}</div>
+              <div className="text-xs text-slate-400 font-mono mt-1">{dashboardOrg?.id || ''}</div>
             </div>
 
-            {/* Profile Selection */}
+            {/* User Selection */}
             <div className="bg-muted/30 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  User Profile
+                  <Users className="h-4 w-4" />
+                  Select User
                 </h3>
-                {selectedOrg && profiles.length > 0 && !showCreateProfile && (
-                  <button
-                    onClick={() => setShowCreateProfile(true)}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                  >
-                    <Plus className="h-3 w-3" />
-                    New
-                  </button>
+                <button
+                  onClick={fetchProfiles}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={loadingProfiles}
+                >
+                  <RefreshCw className={`h-3 w-3 ${loadingProfiles ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+
+              {/* User List */}
+              <div className="space-y-2 mb-3">
+                {profiles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2">
+                    No users yet. Create one to start a session.
+                  </p>
+                ) : (
+                  profiles.map(profile => (
+                    <button
+                      key={profile.id}
+                      onClick={() => {
+                        setSelectedProfile(profile)
+                        setActiveSession(null)
+                        setSessionMessages([])
+                        setSessionSummary(null)
+                      }}
+                      className={`w-full text-left p-3 rounded-lg border transition-all ${
+                        selectedProfile?.id === profile.id
+                          ? 'border-foreground bg-accent'
+                          : 'border-transparent bg-background hover:bg-accent/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-sm font-medium">
+                          {(profile.display_name || profile.username).charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium">{profile.display_name || profile.username}</div>
+                          <div className="text-xs text-muted-foreground">@{profile.username}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))
                 )}
               </div>
 
-              {!selectedOrg ? (
-                <p className="text-sm text-muted-foreground">Select an organization first</p>
-              ) : showCreateProfile || profiles.length === 0 ? (
-                <div className="space-y-2">
-                  {profiles.length === 0 && !showCreateProfile && (
-                    <p className="text-xs text-muted-foreground mb-2">
-                      No profiles yet. Create a user profile:
-                    </p>
-                  )}
-                  <input
-                    type="text"
-                    value={newUsername}
-                    onChange={(e) => setNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
-                    placeholder="username"
-                    className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring font-mono"
-                  />
-                  <input
-                    type="text"
-                    value={newDisplayName}
-                    onChange={(e) => setNewDisplayName(e.target.value)}
-                    placeholder="Display Name (optional)"
-                    className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={createProfile} disabled={loading || !newUsername}>
-                      {loading ? 'Creating...' : 'Create Profile'}
-                    </Button>
-                    {profiles.length > 0 && (
-                      <Button size="sm" variant="ghost" onClick={() => setShowCreateProfile(false)}>
-                        Cancel
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <select
-                    value={selectedProfile?.id || ''}
-                    onChange={(e) => {
-                      const profile = profiles.find(p => p.id === e.target.value)
-                      setSelectedProfile(profile || null)
-                      setActiveSession(null)
-                    }}
-                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ring"
-                    disabled={!selectedOrg}
-                  >
-                    <option value="">Select user...</option>
-                    {profiles.map(profile => (
-                      <option key={profile.id} value={profile.id}>{profile.display_name || profile.username}</option>
-                    ))}
-                  </select>
-                  {selectedProfile && (
-                    <p className="text-xs text-muted-foreground">
-                      @{selectedProfile.username}
-                    </p>
-                  )}
-                </div>
-              )}
+              {/* Create User Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setShowCreateProfile(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create New User
+              </Button>
             </div>
 
             {/* Session Control */}
@@ -829,7 +739,7 @@ export default function PlaygroundPage() {
               {!activeSession ? (
                 <Button 
                   onClick={startSession}
-                  disabled={!selectedOrg || !selectedProfile || loading}
+                  disabled={!selectedProfile || loading}
                   className="w-full"
                 >
                   <Play className="h-4 w-4 mr-2" />
@@ -921,7 +831,9 @@ export default function PlaygroundPage() {
                     <div>
                       <div className="text-5xl mb-4">💬</div>
                       <p className="text-muted-foreground text-sm">
-                        Start a session to begin analyzing messages
+                        {selectedProfile 
+                          ? 'Click "Start Session" to begin analyzing messages'
+                          : 'Select a user and start a session'}
                       </p>
                     </div>
                   </div>
@@ -990,6 +902,54 @@ export default function PlaygroundPage() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Profile Modal */}
+      {showCreateProfile && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Create New User</h2>
+              <button onClick={() => setShowCreateProfile(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Username</label>
+                <input
+                  type="text"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                  placeholder="john_doe"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring font-mono"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Lowercase letters, numbers, underscores, hyphens only</p>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-1 block">Display Name</label>
+                <input
+                  type="text"
+                  value={newDisplayName}
+                  onChange={(e) => setNewDisplayName(e.target.value)}
+                  placeholder="John Doe"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={() => setShowCreateProfile(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button onClick={createProfile} disabled={loading || !newUsername} className="flex-1">
+                  {loading ? 'Creating...' : 'Create User'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
