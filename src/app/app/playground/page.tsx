@@ -501,38 +501,38 @@ export default function PlaygroundPage() {
 
       {/* Simple Mode */}
       {mode === 'simple' && (
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Input Section */}
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-lg font-medium mb-4">Text to Analyze</h2>
-              <div className="space-y-3">
-                <textarea
-                  value={textInput}
-                  onChange={(e) => setTextInput(e.target.value)}
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Input Section */}
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-medium mb-4">Text to Analyze</h2>
+            <div className="space-y-3">
+              <textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
                   className="w-full h-32 p-4 border border-input rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all text-sm font-mono"
-                  placeholder="Enter text to analyze emotions..."
-                />
-                
-                <Button 
+                placeholder="Enter text to analyze emotions..."
+              />
+              
+              <Button 
                   onClick={handleSimpleTest} 
-                  disabled={loading || !textInput.trim() || fetchingKey}
-                  className="w-full"
+                disabled={loading || !textInput.trim() || fetchingKey}
+                className="w-full"
                   size="lg"
-                >
-                  {loading ? 'Analyzing...' : fetchingKey ? 'Loading...' : (
-                    <>
-                      <Play className="h-4 w-4 mr-2" />
-                      Analyze Emotions
-                    </>
-                  )}
-                </Button>
-              </div>
+              >
+                {loading ? 'Analyzing...' : fetchingKey ? 'Loading...' : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Analyze Emotions
+                  </>
+                )}
+              </Button>
             </div>
+          </div>
 
-            <hr className="border-border" />
+          <hr className="border-border" />
 
-            <div>
+          <div>
               <h2 className="text-sm font-medium mb-3 text-muted-foreground">Quick Examples</h2>
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -540,10 +540,10 @@ export default function PlaygroundPage() {
                   { emotion: 'Fear', text: 'I am really worried and anxious about what might happen.', color: 'orange' },
                   { emotion: 'Anger', text: 'This is incredibly frustrating and makes me so angry.', color: 'rose' },
                   { emotion: 'Sadness', text: 'I feel so sad and disappointed about this situation.', color: 'slate' }
-                ].map((example) => (
-                  <button
-                    key={example.emotion}
-                    onClick={() => setTextInput(example.text)}
+              ].map((example) => (
+                <button
+                  key={example.emotion}
+                  onClick={() => setTextInput(example.text)}
                     className="text-left p-3 text-sm border border-border rounded-lg hover:border-foreground/30 hover:bg-muted/30 transition-all"
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -551,53 +551,53 @@ export default function PlaygroundPage() {
                       <span className="font-medium">{example.emotion}</span>
                     </div>
                     <div className="text-xs text-muted-foreground line-clamp-2">{example.text}</div>
-                  </button>
-                ))}
-              </div>
+                </button>
+              ))}
             </div>
           </div>
+        </div>
 
-          {/* Response Section */}
-          <div className="space-y-6">
-            <h2 className="text-lg font-medium">Results</h2>
+        {/* Response Section */}
+        <div className="space-y-6">
+          <h2 className="text-lg font-medium">Results</h2>
 
-            {!response && !error && !loading && (
+          {!response && !error && !loading && (
               <div className="border-2 border-dashed border-border rounded-xl p-16 text-center">
                 <div className="text-4xl mb-4">🎭</div>
-                <p className="text-muted-foreground text-sm">
-                  Enter text and click Analyze to see results
-                </p>
-              </div>
-            )}
+              <p className="text-muted-foreground text-sm">
+                Enter text and click Analyze to see results
+              </p>
+            </div>
+          )}
 
-            {loading && (
+          {loading && (
               <div className="border-2 border-dashed border-border rounded-xl p-16 text-center">
                 <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-current border-r-transparent mb-4"></div>
-                <p className="text-muted-foreground text-sm">
-                  Analyzing emotions...
-                </p>
-              </div>
-            )}
+              <p className="text-muted-foreground text-sm">
+                Analyzing emotions...
+              </p>
+            </div>
+          )}
 
-            {emotionData && (
-              <div className="space-y-6">
-                {/* Main Result */}
+          {emotionData && (
+            <div className="space-y-6">
+              {/* Main Result */}
                 <div className={`border-2 rounded-xl p-8 text-center ${emotionColors[topEmotion] || 'bg-gray-50 border-gray-200'}`}>
                   <div className="text-6xl mb-3">{emotionEmojis[topEmotion] || '😐'}</div>
                   <div className="text-sm font-medium mb-1 opacity-70">Detected Emotion</div>
                   <div className="text-3xl font-bold capitalize mb-2">{topEmotion}</div>
                   <div className="text-lg font-medium opacity-80">
-                    {(emotionData.confidence * 100).toFixed(1)}% confidence
-                  </div>
+                  {(emotionData.confidence * 100).toFixed(1)}% confidence
                 </div>
+              </div>
 
-                {/* Emotion Breakdown */}
+              {/* Emotion Breakdown */}
                 <div className="bg-muted/30 rounded-xl p-6">
                   <h3 className="text-sm font-medium mb-4">Emotion Breakdown</h3>
-                  <div className="space-y-3">
-                    {Object.entries(emotionData.emotions || {})
-                      .sort(([,a]: any, [,b]: any) => b - a)
-                      .map(([emotion, score]: any) => (
+                <div className="space-y-3">
+                  {Object.entries(emotionData.emotions || {})
+                    .sort(([,a]: any, [,b]: any) => b - a)
+                    .map(([emotion, score]: any) => (
                         <div key={emotion} className="flex items-center gap-3">
                           <span className="text-lg">{emotionEmojis[emotion]}</span>
                           <span className="capitalize text-sm w-24">{emotion}</span>
@@ -610,13 +610,13 @@ export default function PlaygroundPage() {
                           <span className="font-mono text-xs text-muted-foreground w-12 text-right">
                             {(score * 100).toFixed(1)}%
                           </span>
-                        </div>
-                      ))}
-                  </div>
+                      </div>
+                    ))}
                 </div>
+              </div>
 
-                {/* VAD Scores */}
-                {emotionData.vad && (
+              {/* VAD Scores */}
+              {emotionData.vad && (
                   <div className="grid grid-cols-3 gap-3">
                     <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 text-center">
                       <div className="text-2xl font-bold text-sky-600">{emotionData.vad.valence.toFixed(2)}</div>
@@ -629,32 +629,32 @@ export default function PlaygroundPage() {
                     <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
                       <div className="text-2xl font-bold text-emerald-600">{emotionData.vad.dominance.toFixed(2)}</div>
                       <div className="text-xs text-emerald-700">Dominance</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Raw JSON */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-medium">Raw Response</h3>
-                    <Button variant="ghost" size="sm" onClick={copyResponse}>
-                      {copied ? (
-                        <><Check className="h-3 w-3 mr-1.5" />Copied</>
-                      ) : (
-                        <><Copy className="h-3 w-3 mr-1.5" />Copy</>
-                      )}
-                    </Button>
-                  </div>
-                  <div className="p-4 bg-slate-950 rounded-lg max-h-48 overflow-y-auto">
-                    <pre className="text-xs text-emerald-400 font-mono">
-                      {JSON.stringify(response, null, 2)}
-                    </pre>
                   </div>
                 </div>
+              )}
+
+              {/* Raw JSON */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium">Raw Response</h3>
+                  <Button variant="ghost" size="sm" onClick={copyResponse}>
+                    {copied ? (
+                        <><Check className="h-3 w-3 mr-1.5" />Copied</>
+                    ) : (
+                        <><Copy className="h-3 w-3 mr-1.5" />Copy</>
+                    )}
+                  </Button>
+                </div>
+                  <div className="p-4 bg-slate-950 rounded-lg max-h-48 overflow-y-auto">
+                  <pre className="text-xs text-emerald-400 font-mono">
+                    {JSON.stringify(response, null, 2)}
+                  </pre>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
+      </div>
       )}
 
       {/* Session Mode */}
@@ -669,22 +669,30 @@ export default function PlaygroundPage() {
                   <Building2 className="h-4 w-4" />
                   Organization
                 </h3>
-                <button
-                  onClick={() => setShowCreateOrg(true)}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Plus className="h-3 w-3" />
-                </button>
+                {organizations.length > 0 && !showCreateOrg && (
+                  <button
+                    onClick={() => setShowCreateOrg(true)}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" />
+                    New
+                  </button>
+                )}
               </div>
               
-              {showCreateOrg ? (
+              {showCreateOrg || organizations.length === 0 ? (
                 <div className="space-y-2">
+                  {organizations.length === 0 && !showCreateOrg && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      No organizations yet. Create one to get started:
+                    </p>
+                  )}
                   <input
                     type="text"
                     value={newOrgName}
                     onChange={(e) => {
                       setNewOrgName(e.target.value)
-                      setNewOrgSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))
+                      setNewOrgSlug(e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''))
                     }}
                     placeholder="Organization name"
                     className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
@@ -692,35 +700,44 @@ export default function PlaygroundPage() {
                   <input
                     type="text"
                     value={newOrgSlug}
-                    onChange={(e) => setNewOrgSlug(e.target.value)}
+                    onChange={(e) => setNewOrgSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                     placeholder="org-slug"
                     className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring font-mono"
                   />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={createOrganization} disabled={loading || !newOrgName}>
-                      Create
+                    <Button size="sm" onClick={createOrganization} disabled={loading || !newOrgName || !newOrgSlug}>
+                      {loading ? 'Creating...' : 'Create Organization'}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setShowCreateOrg(false)}>
-                      Cancel
-                    </Button>
+                    {organizations.length > 0 && (
+                      <Button size="sm" variant="ghost" onClick={() => setShowCreateOrg(false)}>
+                        Cancel
+                      </Button>
+                    )}
                   </div>
                 </div>
               ) : (
-                <select
-                  value={selectedOrg?.id || ''}
-                  onChange={(e) => {
-                    const org = organizations.find(o => o.id === e.target.value)
-                    setSelectedOrg(org || null)
-                    setSelectedProfile(null)
-                    setActiveSession(null)
-                  }}
-                  className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Select organization...</option>
-                  {organizations.map(org => (
-                    <option key={org.id} value={org.id}>{org.name}</option>
-                  ))}
-                </select>
+                <div className="space-y-2">
+                  <select
+                    value={selectedOrg?.id || ''}
+                    onChange={(e) => {
+                      const org = organizations.find(o => o.id === e.target.value)
+                      setSelectedOrg(org || null)
+                      setSelectedProfile(null)
+                      setActiveSession(null)
+                    }}
+                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Select organization...</option>
+                    {organizations.map(org => (
+                      <option key={org.id} value={org.id}>{org.name}</option>
+                    ))}
+                  </select>
+                  {selectedOrg && (
+                    <p className="text-xs text-muted-foreground">
+                      ID: <code className="bg-muted px-1 rounded">{selectedOrg.id}</code>
+                    </p>
+                  )}
+                </div>
               )}
             </div>
 
@@ -731,24 +748,30 @@ export default function PlaygroundPage() {
                   <User className="h-4 w-4" />
                   User Profile
                 </h3>
-                {selectedOrg && (
+                {selectedOrg && profiles.length > 0 && !showCreateProfile && (
                   <button
                     onClick={() => setShowCreateProfile(true)}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                   >
                     <Plus className="h-3 w-3" />
+                    New
                   </button>
                 )}
               </div>
 
               {!selectedOrg ? (
                 <p className="text-sm text-muted-foreground">Select an organization first</p>
-              ) : showCreateProfile ? (
+              ) : showCreateProfile || profiles.length === 0 ? (
                 <div className="space-y-2">
+                  {profiles.length === 0 && !showCreateProfile && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      No profiles yet. Create a user profile:
+                    </p>
+                  )}
                   <input
                     type="text"
                     value={newUsername}
-                    onChange={(e) => setNewUsername(e.target.value)}
+                    onChange={(e) => setNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
                     placeholder="username"
                     className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring font-mono"
                   />
@@ -756,34 +779,43 @@ export default function PlaygroundPage() {
                     type="text"
                     value={newDisplayName}
                     onChange={(e) => setNewDisplayName(e.target.value)}
-                    placeholder="Display Name"
+                    placeholder="Display Name (optional)"
                     className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                   <div className="flex gap-2">
                     <Button size="sm" onClick={createProfile} disabled={loading || !newUsername}>
-                      Create
+                      {loading ? 'Creating...' : 'Create Profile'}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setShowCreateProfile(false)}>
-                      Cancel
-                    </Button>
+                    {profiles.length > 0 && (
+                      <Button size="sm" variant="ghost" onClick={() => setShowCreateProfile(false)}>
+                        Cancel
+                      </Button>
+                    )}
                   </div>
                 </div>
               ) : (
-                <select
-                  value={selectedProfile?.id || ''}
-                  onChange={(e) => {
-                    const profile = profiles.find(p => p.id === e.target.value)
-                    setSelectedProfile(profile || null)
-                    setActiveSession(null)
-                  }}
-                  className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ring"
-                  disabled={!selectedOrg}
-                >
-                  <option value="">Select user...</option>
-                  {profiles.map(profile => (
-                    <option key={profile.id} value={profile.id}>{profile.display_name || profile.username}</option>
-                  ))}
-                </select>
+                <div className="space-y-2">
+                  <select
+                    value={selectedProfile?.id || ''}
+                    onChange={(e) => {
+                      const profile = profiles.find(p => p.id === e.target.value)
+                      setSelectedProfile(profile || null)
+                      setActiveSession(null)
+                    }}
+                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ring"
+                    disabled={!selectedOrg}
+                  >
+                    <option value="">Select user...</option>
+                    {profiles.map(profile => (
+                      <option key={profile.id} value={profile.id}>{profile.display_name || profile.username}</option>
+                    ))}
+                  </select>
+                  {selectedProfile && (
+                    <p className="text-xs text-muted-foreground">
+                      @{selectedProfile.username}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
 
