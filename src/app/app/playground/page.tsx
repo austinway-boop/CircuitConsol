@@ -373,45 +373,79 @@ export default function PlaygroundPage() {
     }
   }
 
+  // Check if speech recognition is available
+  const [speechSupported, setSpeechSupported] = useState(false)
+  
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    setSpeechSupported(!!SpeechRecognition)
+  }, [])
+
   const startRecording = () => {
-    // Use browser Speech Recognition
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) {
-      setError('Speech recognition not supported in this browser. Try Chrome.')
+      setError('Speech recognition not supported. Please type your message instead.')
       return
     }
 
-    recognitionRef.current = new SpeechRecognition()
-    recognitionRef.current.continuous = true
-    recognitionRef.current.interimResults = true
-    
-    let finalTranscript = ''
-    
-    recognitionRef.current.onresult = (event: any) => {
-      let interim = ''
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript + ' '
+    try {
+      recognitionRef.current = new SpeechRecognition()
+      recognitionRef.current.continuous = true
+      recognitionRef.current.interimResults = true
+      recognitionRef.current.lang = 'en-US'
+      
+      let finalTranscript = ''
+      
+      recognitionRef.current.onresult = (event: any) => {
+        let interim = ''
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript + ' '
+          } else {
+            interim += event.results[i][0].transcript
+          }
+        }
+        setTranscription(finalTranscript + interim)
+      }
+      
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error)
+        setIsRecording(false)
+        if (event.error === 'network') {
+          setError('Speech recognition network error. Please type your message instead.')
+        } else if (event.error === 'not-allowed') {
+          setError('Microphone access denied. Please allow microphone access or type your message.')
         } else {
-          interim += event.results[i][0].transcript
+          setError(`Speech error: ${event.error}. Please type your message instead.`)
         }
       }
-      setTranscription(finalTranscript + interim)
+      
+      recognitionRef.current.onend = () => {
+        // Auto-restart if still recording
+        if (isRecording && recognitionRef.current) {
+          try {
+            recognitionRef.current.start()
+          } catch (e) {
+            setIsRecording(false)
+          }
+        }
+      }
+      
+      recognitionRef.current.start()
+      setIsRecording(true)
+      setTranscription('')
+    } catch (err) {
+      setError('Failed to start speech recognition. Please type your message instead.')
     }
-    
-    recognitionRef.current.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error)
-      setIsRecording(false)
-    }
-    
-    recognitionRef.current.start()
-    setIsRecording(true)
-    setTranscription('')
   }
 
   const stopRecording = async () => {
     if (recognitionRef.current) {
-      recognitionRef.current.stop()
+      try {
+        recognitionRef.current.stop()
+      } catch (e) {
+        // Ignore stop errors
+      }
     }
     setIsRecording(false)
     
@@ -449,6 +483,8 @@ export default function PlaygroundPage() {
       } finally {
         setLoading(false)
       }
+    } else if (!transcription.trim() && isRecording) {
+      setError('No speech detected. Please try again or type your message.')
     }
   }
 
@@ -1055,14 +1091,17 @@ export default function PlaygroundPage() {
                       className="flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-ring text-sm"
                       disabled={loading || isRecording}
                     />
-                    <Button
-                      onClick={isRecording ? stopRecording : startRecording}
-                      variant={isRecording ? "destructive" : "outline"}
-                      size="lg"
-                      className="px-4"
-                    >
-                      {isRecording ? <StopCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-                    </Button>
+                    {speechSupported && (
+                      <Button
+                        onClick={isRecording ? stopRecording : startRecording}
+                        variant={isRecording ? "destructive" : "outline"}
+                        size="lg"
+                        className="px-4"
+                        title={isRecording ? "Stop recording" : "Start voice input (optional)"}
+                      >
+                        {isRecording ? <StopCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                      </Button>
+                    )}
                     <Button
                       onClick={sendSessionMessage}
                       disabled={loading || !textInput.trim() || isRecording}
