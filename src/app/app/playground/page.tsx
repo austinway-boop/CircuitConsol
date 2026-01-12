@@ -601,49 +601,49 @@ export default function PlaygroundPage() {
 
       {/* Simple Mode */}
       {mode === 'simple' && (
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Input Section */}
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-lg font-medium mb-4">Text to Analyze</h2>
-              <div className="space-y-3">
-                <textarea
-                  value={textInput}
-                  onChange={(e) => setTextInput(e.target.value)}
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Input Section */}
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-medium mb-4">Text to Analyze</h2>
+            <div className="space-y-3">
+              <textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
                   className="w-full h-32 p-4 border border-input rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all text-sm font-mono"
-                  placeholder="Enter text to analyze emotions..."
-                />
-                
-                <Button 
+                placeholder="Enter text to analyze emotions..."
+              />
+              
+              <Button 
                   onClick={handleSimpleTest} 
-                  disabled={loading || !textInput.trim() || fetchingKey}
-                  className="w-full"
+                disabled={loading || !textInput.trim() || fetchingKey}
+                className="w-full"
                   size="lg"
-                >
-                  {loading ? 'Analyzing...' : fetchingKey ? 'Loading...' : (
-                    <>
-                      <Play className="h-4 w-4 mr-2" />
-                      Analyze Emotions
-                    </>
-                  )}
-                </Button>
-              </div>
+              >
+                {loading ? 'Analyzing...' : fetchingKey ? 'Loading...' : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Analyze Emotions
+                  </>
+                )}
+              </Button>
             </div>
+          </div>
 
-            <hr className="border-border" />
+          <hr className="border-border" />
 
-            <div>
+          <div>
               <h2 className="text-sm font-medium mb-3 text-muted-foreground">Quick Examples</h2>
               <div className="grid grid-cols-2 gap-2">
-                {[
-                  { emotion: 'Joy', text: 'I am absolutely thrilled about this amazing news!' },
-                  { emotion: 'Fear', text: 'I am really worried and anxious about what might happen.' },
-                  { emotion: 'Anger', text: 'This is incredibly frustrating and makes me so angry.' },
-                  { emotion: 'Sadness', text: 'I feel so sad and disappointed about this situation.' }
-                ].map((example) => (
-                  <button
-                    key={example.emotion}
-                    onClick={() => setTextInput(example.text)}
+              {[
+                { emotion: 'Joy', text: 'I am absolutely thrilled about this amazing news!' },
+                { emotion: 'Fear', text: 'I am really worried and anxious about what might happen.' },
+                { emotion: 'Anger', text: 'This is incredibly frustrating and makes me so angry.' },
+                { emotion: 'Sadness', text: 'I feel so sad and disappointed about this situation.' }
+              ].map((example) => (
+                <button
+                  key={example.emotion}
+                  onClick={() => setTextInput(example.text)}
                     className="text-left p-3 text-sm border border-border rounded-lg hover:border-foreground/30 hover:bg-muted/30 transition-all"
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -651,53 +651,53 @@ export default function PlaygroundPage() {
                       <span className="font-medium">{example.emotion}</span>
                     </div>
                     <div className="text-xs text-muted-foreground line-clamp-2">{example.text}</div>
-                  </button>
-                ))}
-              </div>
+                </button>
+              ))}
             </div>
           </div>
+        </div>
 
-          {/* Response Section */}
-          <div className="space-y-6">
-            <h2 className="text-lg font-medium">Results</h2>
+        {/* Response Section */}
+        <div className="space-y-6">
+          <h2 className="text-lg font-medium">Results</h2>
 
-            {!response && !error && !loading && (
+          {!response && !error && !loading && (
               <div className="border-2 border-dashed border-border rounded-xl p-16 text-center">
                 <div className="text-4xl mb-4">🎭</div>
-                <p className="text-muted-foreground text-sm">
-                  Enter text and click Analyze to see results
-                </p>
-              </div>
-            )}
+              <p className="text-muted-foreground text-sm">
+                Enter text and click Analyze to see results
+              </p>
+            </div>
+          )}
 
-            {loading && (
+          {loading && (
               <div className="border-2 border-dashed border-border rounded-xl p-16 text-center">
                 <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-current border-r-transparent mb-4"></div>
-                <p className="text-muted-foreground text-sm">
-                  Analyzing emotions...
-                </p>
-              </div>
-            )}
+              <p className="text-muted-foreground text-sm">
+                Analyzing emotions...
+              </p>
+            </div>
+          )}
 
-            {emotionData && (
-              <div className="space-y-6">
-                {/* Main Result */}
+          {emotionData && (
+            <div className="space-y-6">
+              {/* Main Result */}
                 <div className={`border-2 rounded-xl p-8 text-center ${emotionColors[topEmotion] || 'bg-gray-50 border-gray-200'}`}>
                   <div className="text-6xl mb-3">{emotionEmojis[topEmotion] || '😐'}</div>
                   <div className="text-sm font-medium mb-1 opacity-70">Detected Emotion</div>
                   <div className="text-3xl font-bold capitalize mb-2">{topEmotion}</div>
                   <div className="text-lg font-medium opacity-80">
-                    {(emotionData.confidence * 100).toFixed(1)}% confidence
-                  </div>
+                  {(emotionData.confidence * 100).toFixed(1)}% confidence
                 </div>
+              </div>
 
-                {/* Emotion Breakdown */}
+              {/* Emotion Breakdown */}
                 <div className="bg-muted/30 rounded-xl p-6">
                   <h3 className="text-sm font-medium mb-4">Emotion Breakdown</h3>
-                  <div className="space-y-3">
-                    {Object.entries(emotionData.emotions || {})
-                      .sort(([,a]: any, [,b]: any) => b - a)
-                      .map(([emotion, score]: any) => (
+                <div className="space-y-3">
+                  {Object.entries(emotionData.emotions || {})
+                    .sort(([,a]: any, [,b]: any) => b - a)
+                    .map(([emotion, score]: any) => (
                         <div key={emotion} className="flex items-center gap-3">
                           <span className="text-lg">{emotionEmojis[emotion]}</span>
                           <span className="capitalize text-sm w-24">{emotion}</span>
@@ -710,13 +710,13 @@ export default function PlaygroundPage() {
                           <span className="font-mono text-xs text-muted-foreground w-12 text-right">
                             {(score * 100).toFixed(1)}%
                           </span>
-                        </div>
-                      ))}
-                  </div>
+                      </div>
+                    ))}
                 </div>
+              </div>
 
-                {/* VAD Scores */}
-                {emotionData.vad && (
+              {/* VAD Scores */}
+              {emotionData.vad && (
                   <div className="grid grid-cols-3 gap-3">
                     <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 text-center">
                       <div className="text-2xl font-bold text-sky-600">{emotionData.vad.valence.toFixed(2)}</div>
@@ -814,7 +814,7 @@ export default function PlaygroundPage() {
                         <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-sm font-medium">
                           {(profile.display_name || profile.username).charAt(0).toUpperCase()}
                         </div>
-                        <div>
+                    <div>
                           <div className="text-sm font-medium">{profile.display_name || profile.username}</div>
                           <div className="text-xs text-muted-foreground">@{profile.username}</div>
                         </div>
@@ -867,7 +867,7 @@ export default function PlaygroundPage() {
                     <div className="flex items-center justify-between">
                       <span>Total Messages</span>
                       <span className="font-mono">{profileStats.total_messages}</span>
-                    </div>
+                      </div>
                     <div className="flex items-center justify-between">
                       <span>Avg Valence</span>
                       <span className="font-mono">{(profileStats.avg_valence * 100).toFixed(0)}%</span>
@@ -895,7 +895,7 @@ export default function PlaygroundPage() {
                     )}
                   </div>
                 )}
-              </div>
+                      </div>
             )}
 
             {/* Past Sessions */}
@@ -904,7 +904,7 @@ export default function PlaygroundPage() {
                 <div className="flex items-center gap-2 mb-3">
                   <History className="h-4 w-4" />
                   <h3 className="text-sm font-medium">Past Sessions</h3>
-                </div>
+                    </div>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {pastSessions.slice(0, 5).map(session => (
                     <div
@@ -1014,7 +1014,7 @@ export default function PlaygroundPage() {
                 </div>
               </div>
             )}
-          </div>
+              </div>
 
           {/* Middle Panel: Chat */}
           <div className="lg:col-span-2">
@@ -1023,7 +1023,7 @@ export default function PlaygroundPage() {
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {!activeSession && sessionMessages.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-center">
-                    <div>
+              <div>
                       <div className="text-5xl mb-4">💬</div>
                       <p className="text-muted-foreground text-sm">
                         {selectedProfile 
@@ -1032,8 +1032,8 @@ export default function PlaygroundPage() {
                       </p>
                     </div>
                   </div>
-                ) : (
-                  <>
+                    ) : (
+                      <>
                     {sessionMessages.map((msg) => (
                       <div key={msg.id} className="flex gap-3">
                         <div className={`flex-1 rounded-xl p-4 ${emotionColors[msg.emotion] || 'bg-white border'}`}>
@@ -1061,8 +1061,8 @@ export default function PlaygroundPage() {
                       </div>
                     ))}
                     <div ref={messagesEndRef} />
-                  </>
-                )}
+                      </>
+                    )}
               </div>
 
               {/* Input Area */}
@@ -1077,7 +1077,7 @@ export default function PlaygroundPage() {
                           {isRecording ? (
                             <span>Recording... {recordingTime}s (max 30s)</span>
                           ) : (
-                            <span>Processing audio with Whisper AI...</span>
+                            <span>Transcribing audio...</span>
                           )}
                         </div>
                         {isRecording && (
@@ -1119,10 +1119,10 @@ export default function PlaygroundPage() {
                       className="px-6"
                     >
                       {loading ? '...' : 'Send'}
-                    </Button>
-                  </div>
+                  </Button>
+                </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    💡 Click the mic to record voice (transcribed by Whisper AI), or type your message
+                    💡 Click mic to record voice, or type your message
                   </p>
                 </div>
               )}
